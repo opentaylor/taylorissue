@@ -1,0 +1,11 @@
+pub mod agent_registry;
+pub mod clawhub_client;
+pub mod conversation_store;
+pub mod install_runner;
+pub mod message_service;
+pub mod repair_runner;
+pub mod setup_detection;
+pub mod shell_env;
+pub mod skill_store;
+pub mod step_runner;
+pub mod uninstall_runner;

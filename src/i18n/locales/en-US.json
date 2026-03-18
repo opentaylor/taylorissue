@@ -1,0 +1,432 @@
+{
+  "app": {
+    "name": "一修哥",
+    "subtitle": "© OpenTaylor"
+  },
+  "sidebar": {
+    "overview": "Overview",
+    "install": "Install",
+    "repair": "Repair",
+    "uninstall": "Uninstall",
+    "use": "Use",
+    "raise": "Raise",
+    "message": "Messages",
+    "quickFix": "Quick Fix",
+    "skill": "Skill",
+    "mySkills": "OpenClaw Skills",
+    "marketplace": "Marketplace",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "page": {
+    "dashboard": {
+      "title": "Overview",
+      "hero": {
+        "title": "The world's only OpenClaw repair software. With Yixiuge in hand, your OpenClaw stays worry-free.",
+        "description": "Even without technical skills, you can install it. Even without spending a cent, you can repair it. Install, use, repair, and uninstall — Yixiuge helps you finish everything in one go."
+      },
+      "media": {
+        "title": "Product Demo Animation",
+        "description": "This area is reserved for the main overview animation. Once you send the GIF, it can replace the placeholder directly.",
+        "placeholderTitle": "Animation goes here",
+        "placeholderDescription": "This is temporary placeholder content that can be replaced with the real GIF later."
+      },
+      "config": {
+        "title": "Quick Model Setup",
+        "description": "Give your OpenClaw a brain.",
+        "apiBaseLabel": "API URL",
+        "apiBaseDescription": "The API endpoint for the model service.",
+        "apiKeyLabel": "API Key",
+        "apiKeyDescription": "The API key used for authentication. Keep it safe.",
+        "modelLabel": "Model",
+        "modelDescription": "Specify the model name to use."
+      },
+      "links": {
+        "credentials": "How do I get a free API URL and API key?"
+      },
+      "credentialsDialog": {
+        "title": "How do I get a free API URL and API key?",
+        "description": "Free API providers and trial platforms. Limits may change at any time, so please verify on each provider's official website before use.",
+        "close": "Close"
+      },
+      "meta": {
+        "licenseLabel": "License",
+        "licenseValue": "MIT License © 2026",
+        "maintainers": {
+          "label": "Maintainers",
+          "items": {
+            "zhang": "Zhang Zhi, PhD student, Department of Computing, The Hong Kong Polytechnic University",
+            "liu": "Liu Yan, Professor, Department of Computing, The Hong Kong Polytechnic University"
+          }
+        },
+        "acknowledgements": {
+          "label": "Sponsors",
+          "items": {
+            "chen": "Chen Gong, PhD, Department of Computing, The Hong Kong Polytechnic University"
+          }
+        },
+        "releaseDateLabel": "Release Date",
+        "releaseDateValue": "March 19, 2026"
+      }
+    },
+    "install": {
+      "title": "One-Click Install OpenClaw",
+      "description": "Configure and install OpenClaw services",
+      "card": {
+        "title": "Install OpenClaw Service",
+        "description": "The AI assistant will step through system checks and automatically install and configure the OpenClaw service."
+      },
+      "chainOfThought": "Installation Progress",
+      "ready": "Click the button below to start. The AI assistant will complete all steps automatically.",
+      "startButton": "Start Installation",
+      "resetButton": "Reinstall",
+      "progress": "{{current}} / {{total}} steps completed",
+      "status": {
+        "running": "Installing",
+        "complete": "Complete",
+        "error": "Error",
+        "pleaseWait": "Installation in progress, please wait…"
+      },
+      "error": {
+        "title": "Installation Failed",
+        "failedStep": "Failed at: {{step}}",
+        "close": "Close"
+      },
+      "steps": {
+        "detectEnv": {
+          "label": "Detect system environment",
+          "active": "Scanning OS, architecture, and installed software…",
+          "complete": "System environment detected"
+        },
+        "installGit": {
+          "label": "Install Git",
+          "active": "Installing Git…",
+          "complete": "Git installed successfully"
+        },
+        "installNode": {
+          "label": "Install Node.js",
+          "active": "Installing Node.js…",
+          "complete": "Node.js installed successfully"
+        },
+        "installOpenClaw": {
+          "label": "Install OpenClaw",
+          "active": "Installing OpenClaw…",
+          "complete": "OpenClaw installed successfully"
+        },
+        "configure": {
+          "label": "Configure OpenClaw",
+          "active": "Running onboarding and writing config…",
+          "complete": "Configuration complete"
+        },
+        "verify": {
+          "label": "Verify gateway",
+          "active": "Checking gateway status…",
+          "complete": "Gateway is running"
+        }
+      }
+    },
+    "uninstall": {
+      "title": "One-Click Uninstall OpenClaw",
+      "description": "Remove installed OpenClaw services",
+      "card": {
+        "title": "Uninstall OpenClaw Service",
+        "description": "Select what to remove. The AI assistant will automatically handle uninstallation and cleanup."
+      },
+      "chainOfThought": "Uninstall Progress",
+      "selectItems": "Select items to uninstall",
+      "required": "Required",
+      "caution": "Caution",
+      "startButton": "Start Uninstall",
+      "resetButton": "Uninstall Again",
+      "progress": "{{current}} / {{total}} steps completed",
+      "status": {
+        "running": "Uninstalling",
+        "complete": "Complete",
+        "error": "Error",
+        "pleaseWait": "Uninstall in progress, please wait…"
+      },
+      "error": {
+        "title": "Uninstall Failed",
+        "failedStep": "Failed at: {{step}}",
+        "close": "Close"
+      },
+      "options": {
+        "stopServices": {
+          "label": "Stop services",
+          "description": "Stop the running OpenClaw gateway and remove its daemon"
+        },
+        "removePackage": {
+          "label": "Remove OpenClaw package",
+          "description": "Uninstall the openclaw CLI via npm/pnpm/bun"
+        },
+        "deleteWorkspace": {
+          "label": "Delete workspace",
+          "description": "Remove the workspace directory (~/.openclaw/workspace)"
+        },
+        "deleteConfig": {
+          "label": "Delete configuration files",
+          "description": "Remove openclaw.json, packs.json, and other config files"
+        },
+        "deleteData": {
+          "label": "Delete historical data",
+          "description": "Remove all remaining data in ~/.openclaw (agents, logs, credentials, skills, etc.)"
+        }
+      },
+      "steps": {
+        "stopServices": {
+          "label": "Stop services",
+          "active": "Stopping OpenClaw gateway and removing daemon…",
+          "complete": "Services stopped"
+        },
+        "removePackage": {
+          "label": "Remove OpenClaw package",
+          "active": "Uninstalling openclaw CLI…",
+          "complete": "OpenClaw package removed"
+        },
+        "deleteWorkspace": {
+          "label": "Delete workspace",
+          "active": "Deleting workspace directory…",
+          "complete": "Workspace deleted"
+        },
+        "deleteConfig": {
+          "label": "Delete configuration files",
+          "active": "Deleting configuration files…",
+          "complete": "Configuration files deleted"
+        },
+        "deleteData": {
+          "label": "Delete historical data",
+          "active": "Deleting remaining data in ~/.openclaw…",
+          "complete": "Historical data deleted"
+        }
+      }
+    },
+    "quickFix": {
+      "title": "One-Click Repair OpenClaw",
+      "description": "Scan and fix common system issues with one click",
+      "scan": {
+        "title": "System Scan",
+        "description": "The AI assistant will automatically detect anomalies and list fixable issues.",
+        "startButton": "Start Scan",
+        "rescanButton": "Rescan",
+        "scanning": "Scanning",
+        "complete": "Scan Complete",
+        "noIssues": "All systems are running normally. No issues detected.",
+        "foundIssues": "{{count}} issue(s) found",
+        "progress": "Checking system components…",
+        "chainOfThought": "Scan Progress"
+      },
+      "status": {
+        "error": "Error"
+      },
+      "error": {
+        "title": "Repair Failed",
+        "failedStep": "Failed at: {{step}}",
+        "close": "Close"
+      },
+      "steps": {
+        "checkGateway": {
+          "label": "Check gateway status",
+          "active": "Checking OpenClaw gateway health…",
+          "complete": "Gateway status check complete"
+        },
+        "checkConfig": {
+          "label": "Check configuration",
+          "active": "Verifying model provider configuration…",
+          "complete": "Configuration check complete"
+        },
+        "checkModelRequest": {
+          "label": "Test model request",
+          "active": "Sending test request to gateway…",
+          "complete": "Model request test complete"
+        },
+        "runDoctor": {
+          "label": "Run diagnostics",
+          "active": "Running openclaw doctor…",
+          "complete": "Diagnostics complete"
+        }
+      },
+      "issues": {
+        "title": "Detected Issues",
+        "fixAll": "Fix All",
+        "fix": "Fix",
+        "fixing": "Fixing…",
+        "fixed": "Fixed",
+        "retry": "Retry Fix",
+        "severity": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "serviceStopped": {
+          "name": "OpenClaw service not running",
+          "description": "OpenClaw daemon has stopped and cannot respond to requests"
+        },
+        "configMissing": {
+          "name": "Configuration file missing",
+          "description": "config.yaml does not exist or is corrupted"
+        },
+        "certExpiring": {
+          "name": "SSL certificate expiring soon",
+          "description": "TLS certificate will expire in 7 days"
+        },
+        "diskFull": {
+          "name": "Log directory low on space",
+          "description": "Log directory is 95% full, may affect service operation"
+        },
+        "cacheCorrupted": {
+          "name": "npm cache corrupted",
+          "description": "openclaw-related npm cache files are corrupted"
+        }
+      },
+      "fixProgress": {
+        "chainOfThought": "Fix Progress",
+        "complete": "Fix Complete",
+        "details": {
+          "serviceStopped": ["Process restarted", "PID: 62451", "Health check: passed"],
+          "configMissing": ["Restored config.yaml from backup", "API Key regenerated", "Config validation passed"],
+          "certExpiring": ["New certificate generated", "Valid for: 365 days", "TLS config reloaded"],
+          "diskFull": ["Cleaned expired logs 328MB", "Log rotation enabled", "Free space: 42%"],
+          "cacheCorrupted": ["Corrupted cache cleared", "npm cache rebuilt", "Verification passed"]
+        }
+      },
+      "custom": {
+        "title": "Custom Fix",
+        "description": "Describe your issue and the AI assistant will try to diagnose and fix it.",
+        "placeholder": "Describe the issue you're experiencing, e.g.: service keeps restarting, port occupied, database connection failed…",
+        "fixButton": "Start Fix",
+        "otherIssue": "Other Issue",
+        "emptyWarning": "Please describe your issue first",
+        "chainOfThought": "Diagnosis & Fix",
+        "analyzing": "Analyzing problem description…",
+        "diagnosing": "Diagnosing possible causes…",
+        "executing": "Executing fix operations…",
+        "verifying": "Verifying fix results…",
+        "done": "Fix complete",
+        "steps": {
+          "analyze": {
+            "label": "Analyze problem",
+            "active": "Parsing problem description…",
+            "complete": "Problem analysis complete"
+          },
+          "diagnose": {
+            "label": "Diagnose cause",
+            "active": "Locating root cause…",
+            "complete": "Root cause identified"
+          },
+          "fix": {
+            "label": "Execute fix",
+            "active": "Executing fix operations…",
+            "complete": "Fix operations executed"
+          },
+          "verify": {
+            "label": "Verify result",
+            "active": "Verifying fix effectiveness…",
+            "complete": "Fix verified — issue resolved"
+          }
+        }
+      }
+    },
+    "skill": {
+      "title": "One-Click Raise OpenClaw",
+      "description": "Manage agent skills",
+      "mySkills": "OpenClaw Skills",
+      "marketplace": "Marketplace",
+      "skillName": "Skill",
+      "source": "Source",
+      "status": "Status",
+      "homepage": "Homepage",
+      "link": "Link",
+      "search": "Search",
+      "searchPlaceholder": "Search by name or description...",
+      "allSources": "All sources",
+      "allStatuses": "All statuses",
+      "bundled": "Bundled",
+      "personal": "Personal",
+      "eligible": "Eligible",
+      "notEligible": "Not eligible",
+      "missingRequirements": "Missing requirements",
+      "installHints": "Install hints",
+      "installSuccess": "Install succeeded",
+      "installFailed": "Install failed",
+      "installLog": "Install log",
+      "clearFilters": "Clear filters",
+      "loadingMySkills": "Loading my skills...",
+      "loadingMarketplace": "Loading marketplace...",
+      "actions": "Actions",
+      "install": "Install",
+      "installing": "Installing...",
+      "uninstall": "Uninstall",
+      "uninstalling": "Uninstalling...",
+      "close": "Close",
+      "cancel": "Cancel",
+      "add": "Add",
+      "noInstalledSkills": "No eligible skills",
+      "noInstalledSkillsDesc": "Install missing requirements to enable skills",
+      "noSkillsFound": "No matching skills found",
+      "noSkillsFoundDesc": "Try adjusting your search or filter criteria",
+      "showingSkills": "Showing {{count}} of {{total}} skills",
+      "localSkills": "Local Skills",
+      "localSkillsDesc": "Skills detected by OpenClaw on this machine",
+      "communitySkills": "ClawHub Community",
+      "communitySkillsDesc": "Search and install skills from clawhub.com",
+      "hubSearch": "Search ClawHub",
+      "hubSearchPlaceholder": "Search for community skills...",
+      "hubSearchHint": "Search for skills on ClawHub to discover and install community-created skills",
+      "hubNoResults": "No results found",
+      "hubNoResultsDesc": "Try a different search term",
+      "hubRecommended": "Recommended skills from ClawHub",
+      "hubDownloads": "{{count}} downloads",
+      "hubStars": "{{count}} stars"
+    },
+    "message": {
+      "title": "One-Click Use OpenClaw",
+      "description": "Chat with your agents",
+      "send": "Send",
+      "sendMessage": "Send (Enter)",
+      "inputPlaceholder": "Message {{name}}...",
+      "clearChat": "Clear chat",
+      "greeting": "Hello! I'm {{name}}. How can I help you today?",
+      "selectAgent": "Select an agent to start chatting",
+      "loadingAgents": "Loading agents...",
+      "noAgents": "No agents available"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "modelService": "Model Service",
+    "about": "About",
+    "appName": "App Name",
+    "language": "Language",
+    "languageDescription": "Select the display language for the interface.",
+    "theme": "Theme",
+    "themeDescription": "Choose the appearance theme for the app.",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "apiUrl": "API URL",
+    "apiUrlDescription": "The API endpoint for the model service.",
+    "apiKey": "API Key",
+    "apiKeyDescription": "The API key used for authentication. Keep it safe.",
+    "model": "Model",
+    "modelDescription": "Specify the model name to use.",
+    "version": "Version",
+    "aboutDescription": "OpenTaylor is a security operations tool providing OpenClaw installation & removal, quick fixes, and more.",
+    "openclawSettings": "Advanced",
+    "openclawDir": "OpenClaw Directory",
+    "openclawDirDescription": "OpenClaw metadata directory for storing config and data.",
+    "gatewayToken": "Gateway Token",
+    "gatewayTokenDescription": "Authentication token for the OpenClaw gateway, auto-generated after installation.",
+    "gatewayPort": "Gateway Port",
+    "gatewayPortDescription": "Port the OpenClaw gateway listens on.",
+    "openclawBin": "OpenClaw Binary Path",
+    "openclawBinDescription": "Path to the OpenClaw executable. Leave empty to use the default from PATH.",
+    "openclawBinPlaceholder": "/usr/local/bin/openclaw",
+    "save": "Save",
+    "test": "Test",
+    "testing": "Testing...",
+    "testSuccess": "Connection successful",
+    "testFailed": "Connection failed"
+  }
+}

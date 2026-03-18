@@ -1,0 +1,432 @@
+{
+  "app": {
+    "name": "一修哥",
+    "subtitle": "© OpenTaylor"
+  },
+  "sidebar": {
+    "overview": "概览",
+    "install": "一键安装龙虾",
+    "repair": "一键修理龙虾",
+    "uninstall": "一键卸载龙虾",
+    "use": "一键使用龙虾",
+    "raise": "一键饲养龙虾",
+    "message": "消息",
+    "quickFix": "快速修复",
+    "skill": "技能",
+    "mySkills": "龙虾技能",
+    "marketplace": "技能市场",
+    "settings": "设置",
+    "help": "帮助"
+  },
+  "page": {
+    "dashboard": {
+      "title": "概览",
+      "hero": {
+        "title": "全球唯一一款龙虾维修软件，一修在手龙虾无忧",
+        "description": "不懂技术也能装，不花一分钱也能修。装、用、修、卸，一修哥帮你一步到位。"
+      },
+      "media": {
+        "title": "产品演示动画",
+        "description": "这里会展示概览页主动画。等你稍后提供 GIF 后，可以直接替换当前占位区域。",
+        "placeholderTitle": "动画在这里",
+        "placeholderDescription": "当前使用临时占位内容，后续可替换为真实 GIF。"
+      },
+      "config": {
+        "title": "快速配置模型",
+        "description": "给你的龙虾配置一个大脑吧",
+        "apiBaseLabel": "API 地址",
+        "apiBaseDescription": "模型服务的 API 端点地址。",
+        "apiKeyLabel": "API Key",
+        "apiKeyDescription": "用于鉴权的 API 密钥，请妥善保管。",
+        "modelLabel": "模型",
+        "modelDescription": "指定要使用的模型名称。"
+      },
+      "links": {
+        "credentials": "如何免费获得自己的 API 地址和 API 秘钥？"
+      },
+      "credentialsDialog": {
+        "title": "如何免费获得自己的 API 地址和 API 秘钥？",
+        "description": "以下为免费 API 提供商和试用平台，额度可能随时变化，使用前请以各平台官网信息为准。",
+        "close": "关闭"
+      },
+      "meta": {
+        "licenseLabel": "许可证",
+        "licenseValue": "MIT 协议 © 2026",
+        "maintainers": {
+          "label": "维护者",
+          "items": {
+            "zhang": "张智，博士生，香港理工大学电子计算学系",
+            "liu": "刘焱，教授，香港理工大学电子计算学系"
+          }
+        },
+        "acknowledgements": {
+          "label": "赞助者",
+          "items": {
+            "chen": "陈功，博士，香港理工大学电子计算学系"
+          }
+        },
+        "releaseDateLabel": "发布日期",
+        "releaseDateValue": "2026 年 3 月 19 日"
+      }
+    },
+    "install": {
+      "title": "一键安装龙虾",
+      "description": "配置并安装龙虾服务",
+      "card": {
+        "title": "安装龙虾服务",
+        "description": "AI 助手将逐步检测您的系统环境，并自动完成龙虾服务的安装与配置。"
+      },
+      "chainOfThought": "安装进度",
+      "ready": "点击下方按钮开始安装，AI 助手将自动完成所有步骤。",
+      "startButton": "开始安装",
+      "resetButton": "重新安装",
+      "progress": "{{current}} / {{total}} 步已完成",
+      "status": {
+        "running": "安装中",
+        "complete": "已完成",
+        "error": "出错",
+        "pleaseWait": "正在安装中，请稍候…"
+      },
+      "error": {
+        "title": "安装失败",
+        "failedStep": "失败步骤：{{step}}",
+        "close": "关闭"
+      },
+      "steps": {
+        "detectEnv": {
+          "label": "检测系统环境",
+          "active": "正在检测操作系统、架构和已安装的软件…",
+          "complete": "系统环境检测完毕"
+        },
+        "installGit": {
+          "label": "安装 Git",
+          "active": "正在安装 Git…",
+          "complete": "Git 安装成功"
+        },
+        "installNode": {
+          "label": "安装 Node.js",
+          "active": "正在安装 Node.js…",
+          "complete": "Node.js 安装成功"
+        },
+        "installOpenClaw": {
+          "label": "安装 OpenClaw",
+          "active": "正在安装 OpenClaw…",
+          "complete": "OpenClaw 安装成功"
+        },
+        "configure": {
+          "label": "配置 OpenClaw",
+          "active": "正在运行初始化配置…",
+          "complete": "配置完成"
+        },
+        "verify": {
+          "label": "验证网关",
+          "active": "正在检查网关状态…",
+          "complete": "网关运行正常"
+        }
+      }
+    },
+    "uninstall": {
+      "title": "一键卸载龙虾",
+      "description": "移除已安装的龙虾服务",
+      "card": {
+        "title": "卸载龙虾服务",
+        "description": "选择要移除的内容，AI 助手将自动完成卸载与清理。"
+      },
+      "chainOfThought": "卸载进度",
+      "selectItems": "请选择要卸载的内容",
+      "required": "必选",
+      "caution": "谨慎",
+      "startButton": "开始卸载",
+      "resetButton": "重新卸载",
+      "progress": "{{current}} / {{total}} 步已完成",
+      "status": {
+        "running": "卸载中",
+        "complete": "已完成",
+        "error": "出错",
+        "pleaseWait": "正在卸载中，请稍候…"
+      },
+      "error": {
+        "title": "卸载失败",
+        "failedStep": "失败步骤：{{step}}",
+        "close": "关闭"
+      },
+      "options": {
+        "stopServices": {
+          "label": "停止服务",
+          "description": "停止运行中的 OpenClaw 网关并移除其守护进程"
+        },
+        "removePackage": {
+          "label": "卸载 OpenClaw 包",
+          "description": "通过 npm/pnpm/bun 移除 openclaw CLI"
+        },
+        "deleteWorkspace": {
+          "label": "删除工作区",
+          "description": "移除工作区目录（~/.openclaw/workspace）"
+        },
+        "deleteConfig": {
+          "label": "删除配置文件",
+          "description": "移除 openclaw.json、packs.json 等配置文件"
+        },
+        "deleteData": {
+          "label": "删除历史数据",
+          "description": "移除 ~/.openclaw 中的所有剩余数据（agents、logs、credentials、skills 等）"
+        }
+      },
+      "steps": {
+        "stopServices": {
+          "label": "停止服务",
+          "active": "正在停止 OpenClaw 网关并移除守护进程…",
+          "complete": "服务已停止"
+        },
+        "removePackage": {
+          "label": "卸载 OpenClaw 包",
+          "active": "正在卸载 openclaw CLI…",
+          "complete": "OpenClaw 包已移除"
+        },
+        "deleteWorkspace": {
+          "label": "删除工作区",
+          "active": "正在删除工作区目录…",
+          "complete": "工作区已删除"
+        },
+        "deleteConfig": {
+          "label": "删除配置文件",
+          "active": "正在删除配置文件…",
+          "complete": "配置文件已删除"
+        },
+        "deleteData": {
+          "label": "删除历史数据",
+          "active": "正在删除 ~/.openclaw 中的剩余数据…",
+          "complete": "历史数据已删除"
+        }
+      }
+    },
+    "quickFix": {
+      "title": "一键修理龙虾",
+      "description": "扫描并一键修复常见系统问题",
+      "scan": {
+        "title": "系统扫描",
+        "description": "AI 助手将自动检测系统中的异常并列出可修复的问题。",
+        "startButton": "开始扫描",
+        "rescanButton": "重新扫描",
+        "scanning": "扫描中",
+        "complete": "扫描完成",
+        "noIssues": "系统一切正常，未发现异常。",
+        "foundIssues": "发现 {{count}} 个异常",
+        "progress": "正在检查系统组件…",
+        "chainOfThought": "扫描进度"
+      },
+      "status": {
+        "error": "出错"
+      },
+      "error": {
+        "title": "修复失败",
+        "failedStep": "失败步骤：{{step}}",
+        "close": "关闭"
+      },
+      "steps": {
+        "checkGateway": {
+          "label": "检查网关状态",
+          "active": "正在检查 OpenClaw 网关健康状态…",
+          "complete": "网关状态检查完毕"
+        },
+        "checkConfig": {
+          "label": "检查配置",
+          "active": "正在验证模型提供商配置…",
+          "complete": "配置检查完毕"
+        },
+        "checkModelRequest": {
+          "label": "测试模型请求",
+          "active": "正在向网关发送测试请求…",
+          "complete": "模型请求测试完毕"
+        },
+        "runDoctor": {
+          "label": "运行诊断",
+          "active": "正在运行 openclaw doctor…",
+          "complete": "诊断完毕"
+        }
+      },
+      "issues": {
+        "title": "检测到的异常",
+        "fixAll": "全部修复",
+        "fix": "修复",
+        "fixing": "正在修复…",
+        "fixed": "已修复",
+        "retry": "重试修复",
+        "severity": {
+          "critical": "严重",
+          "high": "高",
+          "medium": "中",
+          "low": "低"
+        },
+        "serviceStopped": {
+          "name": "OpenClaw 服务未运行",
+          "description": "OpenClaw 守护进程已停止，无法响应请求"
+        },
+        "configMissing": {
+          "name": "配置文件缺失",
+          "description": "config.yaml 文件不存在或已损坏"
+        },
+        "certExpiring": {
+          "name": "SSL 证书即将过期",
+          "description": "TLS 证书将在 7 天内过期"
+        },
+        "diskFull": {
+          "name": "日志目录空间不足",
+          "description": "日志目录已使用 95%，可能影响服务运行"
+        },
+        "cacheCorrupted": {
+          "name": "npm 缓存损坏",
+          "description": "openclaw 相关的 npm 缓存文件损坏"
+        }
+      },
+      "fixProgress": {
+        "chainOfThought": "修复进度",
+        "complete": "修复完成",
+        "details": {
+          "serviceStopped": ["进程已重新启动", "PID: 62451", "健康检查: 通过"],
+          "configMissing": ["已从备份恢复 config.yaml", "API Key 已重新生成", "配置验证通过"],
+          "certExpiring": ["已生成新证书", "有效期: 365 天", "已重载 TLS 配置"],
+          "diskFull": ["已清理过期日志 328MB", "已启用日志轮转", "剩余空间: 42%"],
+          "cacheCorrupted": ["已清除损坏缓存", "已重建 npm 缓存", "验证通过"]
+        }
+      },
+      "custom": {
+        "title": "自定义修复",
+        "description": "描述您遇到的问题，AI 助手将尝试诊断并修复。",
+        "placeholder": "请描述您遇到的异常，例如：服务频繁重启、端口被占用、数据库连接失败…",
+        "fixButton": "开始修复",
+        "otherIssue": "其他问题",
+        "emptyWarning": "请先描述您遇到的问题",
+        "chainOfThought": "诊断与修复",
+        "analyzing": "正在分析问题描述…",
+        "diagnosing": "正在诊断可能的原因…",
+        "executing": "正在执行修复操作…",
+        "verifying": "正在验证修复结果…",
+        "done": "修复完成",
+        "steps": {
+          "analyze": {
+            "label": "分析问题",
+            "active": "正在解析问题描述…",
+            "complete": "问题分析完成"
+          },
+          "diagnose": {
+            "label": "诊断原因",
+            "active": "正在定位根因…",
+            "complete": "已定位到问题原因"
+          },
+          "fix": {
+            "label": "执行修复",
+            "active": "正在执行修复操作…",
+            "complete": "修复操作已执行"
+          },
+          "verify": {
+            "label": "验证结果",
+            "active": "正在验证修复效果…",
+            "complete": "修复验证通过，问题已解决"
+          }
+        }
+      }
+    },
+    "skill": {
+      "title": "一键饲养龙虾",
+      "description": "管理智能体技能",
+      "mySkills": "龙虾技能",
+      "marketplace": "技能市场",
+      "skillName": "技能名称",
+      "source": "来源",
+      "status": "状态",
+      "homepage": "主页",
+      "link": "链接",
+      "search": "搜索",
+      "searchPlaceholder": "搜索技能名称或描述...",
+      "allSources": "全部来源",
+      "allStatuses": "全部状态",
+      "bundled": "内置",
+      "personal": "自定义",
+      "eligible": "可用",
+      "notEligible": "不可用",
+      "missingRequirements": "缺少依赖",
+      "installHints": "安装提示",
+      "installSuccess": "安装成功",
+      "installFailed": "安装失败",
+      "installLog": "安装日志",
+      "clearFilters": "清除筛选",
+      "loadingMySkills": "正在加载我的技能...",
+      "loadingMarketplace": "正在加载技能市场...",
+      "actions": "操作",
+      "install": "安装",
+      "installing": "安装中...",
+      "uninstall": "卸载",
+      "uninstalling": "卸载中...",
+      "close": "关闭",
+      "cancel": "取消",
+      "add": "添加",
+      "noInstalledSkills": "暂无可用技能",
+      "noInstalledSkillsDesc": "安装缺少的依赖以启用技能",
+      "noSkillsFound": "未找到匹配的技能",
+      "noSkillsFoundDesc": "尝试调整搜索条件或筛选条件",
+      "showingSkills": "显示 {{count}} / {{total}} 个技能",
+      "localSkills": "本地技能",
+      "localSkillsDesc": "OpenClaw 在本机检测到的技能",
+      "communitySkills": "ClawHub 社区",
+      "communitySkillsDesc": "从 clawhub.com 搜索和安装技能",
+      "hubSearch": "搜索 ClawHub",
+      "hubSearchPlaceholder": "搜索社区技能...",
+      "hubSearchHint": "在 ClawHub 搜索技能，发现和安装社区创建的技能",
+      "hubNoResults": "未找到结果",
+      "hubNoResultsDesc": "试试其他搜索词",
+      "hubRecommended": "来自 ClawHub 的推荐技能",
+      "hubDownloads": "{{count}} 次下载",
+      "hubStars": "{{count}} 颗星"
+    },
+    "message": {
+      "title": "一键使用龙虾",
+      "description": "与你的智能体对话",
+      "send": "发送",
+      "sendMessage": "发送 (Enter)",
+      "inputPlaceholder": "给 {{name}} 发消息...",
+      "clearChat": "清空对话",
+      "greeting": "你好！我是 {{name}}，有什么我可以帮你的吗？",
+      "selectAgent": "选择一个智能体开始对话",
+      "loadingAgents": "正在加载智能体...",
+      "noAgents": "暂无可用智能体"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "general": "常规设置",
+    "modelService": "模型服务",
+    "about": "关于我们",
+    "appName": "应用名称",
+    "language": "语言",
+    "languageDescription": "选择界面显示语言。",
+    "theme": "主题",
+    "themeDescription": "选择应用的外观主题。",
+    "themeSystem": "系统默认",
+    "themeLight": "明亮",
+    "themeDark": "暗黑",
+    "apiUrl": "API 地址",
+    "apiUrlDescription": "模型服务的 API 端点地址。",
+    "apiKey": "API Key",
+    "apiKeyDescription": "用于鉴权的 API 密钥，请妥善保管。",
+    "model": "模型",
+    "modelDescription": "指定要使用的模型名称。",
+    "version": "版本",
+    "aboutDescription": "OpenTaylor 是一款安全运维工具，提供龙虾安装与卸载、快速修复等功能。",
+    "openclawSettings": "高级设置",
+    "openclawDir": "OpenClaw 目录",
+    "openclawDirDescription": "OpenClaw 元数据目录，用于存放配置和数据。",
+    "gatewayToken": "网关令牌",
+    "gatewayTokenDescription": "OpenClaw 网关鉴权令牌，安装完成后自动生成。",
+    "gatewayPort": "网关端口",
+    "gatewayPortDescription": "OpenClaw 网关监听端口。",
+    "openclawBin": "OpenClaw 路径",
+    "openclawBinDescription": "OpenClaw 可执行文件路径，留空则使用 PATH 中的默认值。",
+    "openclawBinPlaceholder": "/usr/local/bin/openclaw",
+    "save": "保存",
+    "test": "测试",
+    "testing": "测试中...",
+    "testSuccess": "连接成功",
+    "testFailed": "连接失败"
+  }
+}

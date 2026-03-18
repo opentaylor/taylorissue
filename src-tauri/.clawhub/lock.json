@@ -20,6 +20,10 @@
     "flexible-database-design": {
       "version": "1.0.0",
       "installedAt": 1773859285385
+    },
+    "web-pilot": {
+      "version": "1.0.0",
+      "installedAt": 1773921073943
     }
   }
 }

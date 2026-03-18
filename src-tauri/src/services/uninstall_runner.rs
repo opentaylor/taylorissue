@@ -4,75 +4,32 @@ use tauri::ipc::Channel;
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
 use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::services::step_runner::{run_step, StepDef};
 
-const SYSTEM_PROMPT: &str = "\
-You are an automated uninstaller for OpenClaw. \
-You execute shell commands to remove installed components. \
-You MUST respond with ONLY a valid JSON object — no markdown, no explanation. \
-If a step fails, set \"success\" to false with the reason in \"error\". \
-IMPORTANT: Before removing anything, CHECK whether it exists first. \
-If it does not exist, report success and note it was already absent.";
+pub const SYSTEM_PROMPT: &str = include_str!("../prompts/uninstall/system.md");
 
-static ALL_STEPS: &[StepDef] = &[
+pub static ALL_STEPS: &[StepDef] = &[
     StepDef {
         id: "stopServices",
-        prompt: "\
-Stop and uninstall the OpenClaw gateway service.\n\
-Run these commands in order (skip any that fail gracefully):\n\
-  1. openclaw gateway stop 2>/dev/null || true\n\
-  2. openclaw gateway uninstall 2>/dev/null || true\n\n\
-If the openclaw CLI is not installed, check for leftover service files:\n\
-  macOS: ls ~/Library/LaunchAgents/ai.openclaw.gateway.plist 2>/dev/null && \
-rm -f ~/Library/LaunchAgents/ai.openclaw.gateway.plist\n\
-  Linux: systemctl --user stop openclaw-gateway 2>/dev/null; \
-rm -f ~/.config/systemd/user/openclaw-gateway.service && \
-systemctl --user daemon-reload 2>/dev/null\n\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"was_running\": true|false, \"details\": \"<summary>\"}\n\
-On failure: {\"success\": false, \"error\": \"<reason>\"}",
+        prompt: include_str!("../prompts/uninstall/stop_services.md"),
     },
     StepDef {
         id: "removePackage",
-        prompt: "\
-Uninstall the OpenClaw npm package.\n\
-  1. npm rm -g openclaw 2>/dev/null || true\n\
-  2. Verify it is gone: which openclaw && echo 'still present' || echo 'removed'\n\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"version_removed\": \"<version or unknown>\", \"details\": \"<summary>\"}\n\
-On failure: {\"success\": false, \"error\": \"<reason>\"}",
+        prompt: include_str!("../prompts/uninstall/remove_package.md"),
     },
     StepDef {
         id: "deleteWorkspace",
-        prompt: "\
-Delete the OpenClaw workspace directory.\n\
-  ls -d ~/.openclaw/workspace 2>/dev/null\n\
-  If it exists: rm -rf ~/.openclaw/workspace\n\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"existed\": true|false, \"details\": \"<summary>\"}\n\
-On failure: {\"success\": false, \"error\": \"<reason>\"}",
+        prompt: include_str!("../prompts/uninstall/delete_workspace.md"),
     },
     StepDef {
         id: "deleteConfig",
-        prompt: "\
-Delete OpenClaw configuration files from ~/.openclaw.\n\
-Target files: openclaw.json, openclaw.json.bak, packs.json, update-check.json\n\
-  ls these files, delete any that exist.\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"files_deleted\": [\"<file1>\", ...], \"details\": \"<summary>\"}\n\
-On failure: {\"success\": false, \"error\": \"<reason>\"}",
+        prompt: include_str!("../prompts/uninstall/delete_config.md"),
     },
     StepDef {
         id: "deleteData",
-        prompt: "\
-Delete all remaining data inside ~/.openclaw.\n\
-This includes: credentials, agents, sessions, logs, secrets.\n\
-  ls ~/.openclaw/ 2>/dev/null\n\
-  If has contents: rm -rf ~/.openclaw\n\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"items_removed\": [\"<item1>\", ...], \"details\": \"<summary>\"}\n\
-On failure: {\"success\": false, \"error\": \"<reason>\"}",
+        prompt: include_str!("../prompts/uninstall/delete_data.md"),
     },
 ];
 
@@ -129,6 +86,7 @@ pub async fn run_uninstall(
     agent.name = "UninstallRunner".to_string();
     agent.llm = Some(Box::new(llm));
     agent.tools = vec![Box::new(BashTool::new())];
+    agent.middlewares = vec![Box::new(LoggingMiddleware::new("uninstall"))];
 
     let mut session = Session::with_messages(vec![serde_json::json!({
         "role": "system", "content": SYSTEM_PROMPT

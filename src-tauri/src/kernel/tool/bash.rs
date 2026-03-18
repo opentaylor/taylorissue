@@ -40,20 +40,31 @@ impl Default for BashTool {
 #[async_trait]
 impl BaseTool for BashTool {
     fn name(&self) -> &str {
-        "bash"
+        #[cfg(windows)]
+        { "powershell" }
+        #[cfg(not(windows))]
+        { "bash" }
     }
 
     fn description(&self) -> &str {
-        "Run a shell command and return stdout + stderr."
+        #[cfg(windows)]
+        { "Run a PowerShell command on Windows and return stdout + stderr." }
+        #[cfg(not(windows))]
+        { "Run a bash shell command and return stdout + stderr." }
     }
 
     fn params_schema(&self) -> Value {
+        #[cfg(windows)]
+        let cmd_desc = "The PowerShell command to execute (runs via powershell.exe -Command)";
+        #[cfg(not(windows))]
+        let cmd_desc = "The bash shell command to execute (runs via sh -c)";
+
         serde_json::json!({
             "type": "object",
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "The shell command to execute"
+                    "description": cmd_desc,
                 }
             },
             "required": ["command"]
@@ -66,8 +77,20 @@ impl BaseTool for BashTool {
             .and_then(|v| v.as_str())
             .ok_or("Missing 'command' argument")?;
 
-        let mut cmd = Command::new("sh");
-        cmd.arg("-c").arg(command);
+        let mut cmd = {
+            #[cfg(windows)]
+            {
+                let mut c = Command::new("powershell.exe");
+                c.args(["-NoProfile", "-NonInteractive", "-Command", command]);
+                c
+            }
+            #[cfg(not(windows))]
+            {
+                let mut c = Command::new("sh");
+                c.arg("-c").arg(command);
+                c
+            }
+        };
         shell_env::apply_env_async(&mut cmd);
 
         if let Some(ref workdir) = self.workdir {
@@ -111,7 +134,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_bash_echo() {
+    async fn test_echo() {
         let tool = BashTool::new();
         let result = tool
             .run(serde_json::json!({"command": "echo hello"}))
@@ -121,48 +144,74 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_bash_exit_code() {
+    async fn test_exit_code() {
         let tool = BashTool::new();
+        #[cfg(windows)]
+        let cmd = "exit 1";
+        #[cfg(not(windows))]
+        let cmd = "exit 1";
         let result = tool
-            .run(serde_json::json!({"command": "exit 1"}))
+            .run(serde_json::json!({"command": cmd}))
             .await
             .unwrap();
         assert!(result.contains("Exit code: 1"));
     }
 
     #[tokio::test]
-    async fn test_bash_stderr() {
+    async fn test_stderr() {
         let tool = BashTool::new();
+        #[cfg(windows)]
+        let cmd = "Write-Error 'err'";
+        #[cfg(not(windows))]
+        let cmd = "echo err >&2";
         let result = tool
-            .run(serde_json::json!({"command": "echo err >&2"}))
+            .run(serde_json::json!({"command": cmd}))
             .await
             .unwrap();
         assert!(result.contains("err"));
     }
 
     #[tokio::test]
-    async fn test_bash_workdir() {
-        let tool = BashTool::new().with_workdir(PathBuf::from("/tmp"));
+    async fn test_workdir() {
+        let tmp = std::env::temp_dir();
+        let tool = BashTool::new().with_workdir(tmp.clone());
+        #[cfg(windows)]
+        let cmd = "(Get-Location).Path";
+        #[cfg(not(windows))]
+        let cmd = "pwd";
         let result = tool
-            .run(serde_json::json!({"command": "pwd"}))
+            .run(serde_json::json!({"command": cmd}))
             .await
             .unwrap();
-        assert!(result.contains("/tmp") || result.contains("/private/tmp"));
+        let tmp_lower = tmp.to_string_lossy().to_lowercase();
+        let result_lower = result.to_lowercase().replace('/', "\\");
+        assert!(
+            result_lower.contains(tmp_lower.trim_end_matches('\\'))
+                || result_lower.contains(tmp_lower.trim_end_matches('/')),
+            "workdir output should contain temp path; got: {result:?}"
+        );
     }
 
     #[tokio::test]
-    async fn test_bash_timeout() {
+    async fn test_timeout() {
         let tool = BashTool::new().with_timeout(Duration::from_millis(100));
+        #[cfg(windows)]
+        let cmd = "Start-Sleep -Seconds 10";
+        #[cfg(not(windows))]
+        let cmd = "sleep 10";
         let result = tool
-            .run(serde_json::json!({"command": "sleep 10"}))
+            .run(serde_json::json!({"command": cmd}))
             .await
             .unwrap();
         assert!(result.contains("timed out"));
     }
 
     #[test]
-    fn test_bash_schema() {
+    fn test_schema() {
         let tool = BashTool::new();
+        #[cfg(windows)]
+        assert_eq!(tool.name(), "powershell");
+        #[cfg(not(windows))]
         assert_eq!(tool.name(), "bash");
         let schema = tool.params_schema();
         assert!(schema["properties"]["command"].is_object());

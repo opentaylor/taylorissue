@@ -1,7 +1,27 @@
 pub mod commands;
 pub mod config;
 pub mod kernel;
+pub mod prompts;
 pub mod services;
+
+#[cfg(target_os = "windows")]
+fn disable_webview2_overscroll(app: &tauri::App) {
+    use tauri::Manager;
+
+    let Some(main_window) = app.get_webview_window("main") else {
+        return;
+    };
+    let _ = main_window.with_webview(|webview| unsafe {
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings6;
+        use windows::core::Interface;
+
+        let core = webview.controller().CoreWebView2().unwrap();
+        let settings = core.Settings().unwrap();
+        if let Ok(settings6) = settings.cast::<ICoreWebView2Settings6>() {
+            let _ = settings6.SetIsSwipeNavigationEnabled(false);
+        }
+    });
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -9,6 +29,11 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            #[cfg(target_os = "windows")]
+            disable_webview2_overscroll(app);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Install
             commands::install::start_install,

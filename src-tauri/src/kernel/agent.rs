@@ -191,6 +191,12 @@ impl Agent {
         self.prefix_messages = Vec::new();
         self.active_response_format = response_format.or(self.response_format.clone());
 
+        {
+            let mws = std::mem::take(&mut self.middlewares);
+            for mw in &mws { let _ = mw.wrap_start(self).await; }
+            self.middlewares = mws;
+        }
+
         let mut step = 0;
         loop {
             if step >= self.max_steps {
@@ -198,9 +204,21 @@ impl Agent {
             }
 
             if has_pending_tool_calls(&session) {
-                // execute pending tool calls
+                self.session = Some(session.clone());
+                {
+                    let mws = std::mem::take(&mut self.middlewares);
+                    for mw in &mws { let _ = mw.wrap_tool(self).await; }
+                    self.middlewares = mws;
+                }
                 self.execute_tool_calls(&mut session).await?;
             } else {
+                self.session = Some(session.clone());
+                {
+                    let mws = std::mem::take(&mut self.middlewares);
+                    for mw in &mws { let _ = mw.wrap_llm(self).await; }
+                    self.middlewares = mws;
+                }
+
                 self.prefix_messages = Vec::new();
                 self.call_llm(&mut session).await?;
                 step += 1;
@@ -208,11 +226,23 @@ impl Agent {
                 if !has_tool_calls(&session) {
                     break;
                 }
+
+                self.session = Some(session.clone());
+                {
+                    let mws = std::mem::take(&mut self.middlewares);
+                    for mw in &mws { let _ = mw.wrap_tool(self).await; }
+                    self.middlewares = mws;
+                }
                 self.execute_tool_calls(&mut session).await?;
             }
         }
 
         self.session = Some(session.clone());
+        {
+            let mws = std::mem::take(&mut self.middlewares);
+            for mw in &mws { let _ = mw.wrap_end(self).await; }
+            self.middlewares = mws;
+        }
         Ok(session)
     }
 

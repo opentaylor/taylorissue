@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 export default function DashboardLayout() {
   return (
     <SidebarProvider
+      className="max-h-screen overflow-hidden"
       style={
         {
           "--header-height": "calc(var(--spacing) * 12)",
@@ -13,9 +14,9 @@ export default function DashboardLayout() {
       }
     >
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-h-0">
         <SiteHeader />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-h-0 overflow-y-auto overscroll-none no-scrollbar">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <Outlet />
           </div>

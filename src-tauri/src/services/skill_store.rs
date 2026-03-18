@@ -8,8 +8,10 @@ use thiserror::Error;
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
 use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::services::shell_env;
+use crate::prompts::render;
 use crate::services::step_runner::extract_json;
 
 #[derive(Error, Debug)]
@@ -135,23 +137,19 @@ pub async fn list_skills(openclaw_bin: &str) -> Result<Vec<SkillInfo>, SkillErro
     Ok(result)
 }
 
-const SKILL_INSTALL_PROMPT: &str = "\
-You are an automated dependency installer for OpenClaw skills. \
-You execute shell commands one at a time and report results as JSON. \
-You MUST respond with ONLY a valid JSON object — no markdown, no explanation. \
-If a command fails, analyse the error, fix the root cause, and retry. \
-Common failures include rate-limits (wait and retry), missing PATH entries, \
-network timeouts, and permission issues. \
-IMPORTANT: Run commands ONE AT A TIME, sequentially. Never combine or parallelize them.";
+pub const SKILL_INSTALL_PROMPT: &str = include_str!("../prompts/skill/install_system.md");
+pub const DEPS_TEMPLATE: &str = include_str!("../prompts/skill/deps.md");
+pub const CLAWHUB_INSTALL_TEMPLATE: &str = include_str!("../prompts/skill/clawhub_install.md");
 
-const MAX_INSTALL_RETRIES: usize = 16;
+pub const MAX_INSTALL_RETRIES: usize = 16;
 
-async fn agent_install(config: &AppConfig, prompt: &str) -> InstallResult {
+pub async fn agent_install(config: &AppConfig, prompt: &str) -> InstallResult {
     let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "SkillInstaller".to_string();
     agent.llm = Some(Box::new(llm));
     agent.tools = vec![Box::new(BashTool::new())];
+    agent.middlewares = vec![Box::new(LoggingMiddleware::new("skill"))];
 
     let mut session = Session::with_messages(vec![
         serde_json::json!({"role": "system", "content": SKILL_INSTALL_PROMPT}),
@@ -250,7 +248,7 @@ async fn agent_install(config: &AppConfig, prompt: &str) -> InstallResult {
     InstallResult { ok: false, outputs }
 }
 
-fn build_skill_deps_prompt(name: &str, install_instructions: &[Value]) -> String {
+pub fn build_skill_deps_prompt(name: &str, install_instructions: &[Value]) -> String {
     let kind_cmd: HashMap<&str, Vec<&str>> = [
         ("brew", vec!["brew", "install"]),
         ("npm", vec!["npm", "install", "-g"]),
@@ -279,16 +277,10 @@ fn build_skill_deps_prompt(name: &str, install_instructions: &[Value]) -> String
         }
     }
 
-    format!(
-        "Install the dependencies for OpenClaw skill \"{name}\".\n\n\
-         Run these commands one at a time:\n{commands}\n\n\
-         After all commands succeed, verify each binary is available on PATH.\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"details\": \"<packages installed>\"}}\n\
-         On failure: {{\"success\": false, \"error\": \"<reason>\"}}",
-        name = name,
-        commands = commands.join("\n"),
-    )
+    render(DEPS_TEMPLATE, &[
+        ("name", name),
+        ("commands", &commands.join("\n")),
+    ])
 }
 
 pub async fn install_skill(config: &AppConfig, name: &str) -> Result<InstallResult, SkillError> {
@@ -312,16 +304,7 @@ pub async fn install_skill(config: &AppConfig, name: &str) -> Result<InstallResu
 }
 
 pub async fn install_clawhub_skill(config: &AppConfig, slug: &str) -> InstallResult {
-    let prompt = format!(
-        "Install the OpenClaw skill \"{slug}\" from ClawHub.\n\n\
-         Run this exact command:\n  clawhub install --force {slug}\n\n\
-         If `clawhub` is not found on PATH, try:\n  npx -y clawhub install --force {slug}\n\n\
-         After the command finishes, verify: ls ~/.openclaw/skills/{slug}/SKILL.md\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"details\": \"<brief summary>\"}}\n\
-         On failure: {{\"success\": false, \"error\": \"<reason>\"}}",
-        slug = slug,
-    );
+    let prompt = render(CLAWHUB_INSTALL_TEMPLATE, &[("slug", slug)]);
     agent_install(config, &prompt).await
 }
 

@@ -41,7 +41,40 @@ pub fn extract_text(content: &serde_json::Value) -> String {
 }
 
 #[async_trait]
-impl Middleware for LoggingMiddleware {}
+impl Middleware for LoggingMiddleware {
+    async fn wrap_start(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let msg_count = agent.session.as_ref().map(|s| s.messages.len()).unwrap_or(0);
+        log::info!("[{}][{}] run started, {} messages", self.label, agent.name, msg_count);
+        Ok(())
+    }
+
+    async fn wrap_llm(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let msg_count = agent.session.as_ref().map(|s| s.messages.len()).unwrap_or(0);
+        log::info!("[{}][{}] calling LLM, {} messages in context", self.label, agent.name, msg_count);
+        Ok(())
+    }
+
+    async fn wrap_tool(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(session) = &agent.session {
+            if let Some(last) = session.messages.last() {
+                if let Some(tcs) = last.get("tool_calls").and_then(|v| v.as_array()) {
+                    let names: Vec<&str> = tcs.iter()
+                        .filter_map(|tc| tc.get("function")
+                            .and_then(|f| f.get("name").and_then(|n| n.as_str())))
+                        .collect();
+                    log::info!("[{}][{}] executing tools: {:?}", self.label, agent.name, names);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn wrap_end(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let msg_count = agent.session.as_ref().map(|s| s.messages.len()).unwrap_or(0);
+        log::info!("[{}][{}] run complete, {} messages", self.label, agent.name, msg_count);
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 mod tests {

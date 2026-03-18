@@ -4375,7 +4375,7 @@ dependencies = [
 
 [[package]]
 name = "taylor-issue"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4398,7 +4398,9 @@ dependencies = [
  "tiktoken-rs",
  "tokio",
  "uuid",
+ "webview2-com",
  "which",
+ "windows",
 ]
 
 [[package]]

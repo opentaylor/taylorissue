@@ -132,7 +132,7 @@ Maintainers
 
 Sponsors
 
-- Chen Gong, PhD, Department of Computing, The Hong Kong Polytechnic University
+- Chen Gong, PhD, Department of Computing, The Hong Kong Polytechnic University, Founder of Zhixin Technology and BiaoHan Technology
 
 ## License
 

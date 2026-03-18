@@ -4,55 +4,43 @@ use tauri::ipc::Channel;
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
 use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
+use crate::prompts::render;
 use crate::services::step_runner::{run_step_dynamic, StepDef};
 
-const SYSTEM_PROMPT: &str = "\
-You are an automated diagnostic scanner for OpenClaw. \
-You execute shell commands to CHECK system health and REPORT findings. \
-You MUST respond with ONLY a valid JSON object — no markdown, no explanation. \
-CRITICAL: You are READ-ONLY. NEVER attempt to fix, install, start, stop, \
-restart, or modify anything. Only run commands that read or check status. \
-If you find a problem, describe it and what the user should do — \
-but do NOT fix it yourself.";
+pub const SYSTEM_PROMPT: &str = include_str!("../prompts/repair/system.md");
+pub const FIX_SYSTEM_PROMPT: &str = include_str!("../prompts/repair/fix_system.md");
 
-fn build_check_gateway_prompt(config: &AppConfig) -> String {
-    format!(
-        "Check the OpenClaw gateway health. DO NOT fix anything.\n\
-         Run these commands in order:\n\
-           1. which openclaw || echo 'not installed'\n\
-           2. openclaw gateway status 2>&1\n\
-           3. openclaw health 2>&1\n\n\
-         The gateway should be running on port {port}.\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"status\": \"<running|stopped|not installed>\", \
-         \"port\": <port number or null>, \
-         \"details\": \"<description of gateway state>\"}}",
-        port = config.gateway_port,
-    )
+pub const CHECK_GATEWAY_TEMPLATE: &str = include_str!("../prompts/repair/check_gateway.md");
+pub const CHECK_CONFIG_TEMPLATE: &str = include_str!("../prompts/repair/check_config.md");
+pub const CHECK_MODEL_REQUEST_TEMPLATE: &str = include_str!("../prompts/repair/check_model_request.md");
+pub const FIX_TEMPLATE: &str = include_str!("../prompts/repair/fix.md");
+pub const CUSTOM_FIX_ANALYZE_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_analyze.md");
+pub const CUSTOM_FIX_DIAGNOSE_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_diagnose.md");
+pub const CUSTOM_FIX_FIX_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_fix.md");
+pub const CUSTOM_FIX_VERIFY_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_verify.md");
+
+pub static STEP_RUN_DOCTOR: StepDef = StepDef {
+    id: "runDoctor",
+    prompt: include_str!("../prompts/repair/run_doctor.md"),
+};
+
+pub fn build_check_gateway_prompt(config: &AppConfig) -> String {
+    render(CHECK_GATEWAY_TEMPLATE, &[
+        ("port", &config.gateway_port.to_string()),
+    ])
 }
 
-fn build_check_config_prompt(config: &AppConfig) -> String {
-    format!(
-        "Check the OpenClaw configuration. DO NOT fix anything.\n\
-         Run these commands:\n\
-           1. cat ~/.openclaw/openclaw.json 2>/dev/null | head -80\n\
-           2. Check that a model provider is configured with a baseUrl and apiKey\n\
-           3. Check contextWindow and maxTokens values (should be large, e.g. 1000000 and 32768)\n\n\
-         The expected model should be: {model}\n\
-         The expected base URL should contain: {base_url}\n\
-         The gateway port should be: {port}\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"has_config\": true|false, \
-         \"model_configured\": true|false, \
-         \"details\": \"<description of config state>\"}}",
-        model = config.model,
-        base_url = config.base_url,
-        port = config.gateway_port,
-    )
+pub fn build_check_config_prompt(config: &AppConfig) -> String {
+    render(CHECK_CONFIG_TEMPLATE, &[
+        ("model", &config.model),
+        ("base_url", &config.base_url),
+        ("port", &config.gateway_port.to_string()),
+    ])
 }
 
-fn build_check_model_request_prompt(config: &AppConfig) -> String {
+pub fn build_check_model_request_prompt(config: &AppConfig) -> String {
     let base = config.base_url.trim_end_matches('/');
     let completions_url = if base.ends_with("/v1") {
         format!("{}/chat/completions", base)
@@ -60,48 +48,14 @@ fn build_check_model_request_prompt(config: &AppConfig) -> String {
         format!("{}/v1/chat/completions", base)
     };
 
-    format!(
-        "Test whether the model provider responds to a chat completion request. \
-         DO NOT fix anything.\n\n\
-         First, try the provider directly:\n\
-           curl -s -o /dev/null -w '%{{http_code}}' -m 30 -X POST \\\n\
-             '{completions_url}' \\\n\
-             -H 'Content-Type: application/json' \\\n\
-             -H 'Authorization: Bearer {api_key}' \\\n\
-             -d '{{\"model\": \"{model}\", \"max_tokens\": 16, \
-         \"messages\": [{{\"role\": \"user\", \"content\": \"Say OK\"}}]}}'\n\n\
-         Then, if the gateway is running, also test the gateway endpoint:\n\
-           curl -s -o /dev/null -w '%{{http_code}}' -m 30 -X POST \\\n\
-             'http://localhost:{port}/v1/chat/completions' \\\n\
-             -H 'Content-Type: application/json' \\\n\
-             -H 'Authorization: Bearer {gateway_token}' \\\n\
-             -d '{{\"model\": \"{model}\", \"max_tokens\": 16, \
-         \"messages\": [{{\"role\": \"user\", \"content\": \"Say OK\"}}]}}'\n\n\
-         HTTP 200 = working. 404 from gateway = chatCompletions endpoint not enabled \
-         (this is fine if the provider test passed). Other codes indicate a problem.\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"http_status\": <provider status code or null>, \
-         \"gateway_status\": <gateway status code or null>, \
-         \"details\": \"<description>\"}}",
-        completions_url = completions_url,
-        api_key = config.api_key,
-        model = config.model,
-        port = config.gateway_port,
-        gateway_token = config.gateway_token,
-    )
+    render(CHECK_MODEL_REQUEST_TEMPLATE, &[
+        ("completions_url", &completions_url),
+        ("api_key", &config.api_key),
+        ("model", &config.model),
+        ("port", &config.gateway_port.to_string()),
+        ("gateway_token", &config.gateway_token),
+    ])
 }
-
-static STEP_RUN_DOCTOR: StepDef = StepDef {
-    id: "runDoctor",
-    prompt: "\
-Run the OpenClaw built-in diagnostics. DO NOT fix anything.\n\
-  1. openclaw doctor 2>&1\n\
-  2. openclaw status 2>&1\n\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"warnings\": <number of warnings>, \
-\"issues\": [\"<issue1>\", ...], \
-\"details\": \"<doctor output summary>\"}",
-};
 
 fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
     let mut details = Vec::new();
@@ -169,12 +123,6 @@ fn has_issue(step_id: &str, parsed: &Value) -> bool {
     }
 }
 
-const FIX_SYSTEM_PROMPT: &str = "\
-You are an automated diagnostic and repair tool for OpenClaw. \
-You execute shell commands to analyse, diagnose, fix, and verify issues. \
-You MUST respond with ONLY a valid JSON object — no markdown, no explanation. \
-IMPORTANT: After any config change, restart the gateway with: openclaw gateway restart";
-
 pub async fn run_repair(
     config: AppConfig,
     channel: Channel<Value>,
@@ -184,6 +132,7 @@ pub async fn run_repair(
     agent.name = "RepairRunner".to_string();
     agent.llm = Some(Box::new(llm));
     agent.tools = vec![Box::new(BashTool::new())];
+    agent.middlewares = vec![Box::new(LoggingMiddleware::new("repair"))];
 
     let mut session = Session::with_messages(vec![serde_json::json!({
         "role": "system", "content": SYSTEM_PROMPT
@@ -217,18 +166,12 @@ pub async fn run_fix(
     agent.name = "FixRunner".to_string();
     agent.llm = Some(Box::new(llm));
     agent.tools = vec![Box::new(BashTool::new())];
+    agent.middlewares = vec![Box::new(LoggingMiddleware::new("fix"))];
 
-    let prompt = format!(
-        "The diagnostic scan for step \"{}\" found the following issue:\n\n\
-         {}\n\n\
-         Fix this issue now. You CAN and SHOULD run commands that modify system state.\n\
-         IMPORTANT: If you modify ~/.openclaw/openclaw.json, you MUST run \
-         'openclaw gateway restart' afterwards so changes take effect.\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"details\": \"<what was done to fix it>\"}}\n\
-         On failure: {{\"success\": false, \"error\": \"<why the fix did not work>\"}}",
-        step_id, issue_description
-    );
+    let prompt = render(FIX_TEMPLATE, &[
+        ("step_id", step_id),
+        ("issue_description", issue_description),
+    ]);
 
     let mut session = Session::with_messages(vec![serde_json::json!({
         "role": "system", "content": FIX_SYSTEM_PROMPT
@@ -250,38 +193,21 @@ pub async fn run_custom_fix(
     agent.name = "CustomFixRunner".to_string();
     agent.llm = Some(Box::new(llm));
     agent.tools = vec![Box::new(BashTool::new())];
+    agent.middlewares = vec![Box::new(LoggingMiddleware::new("custom_fix"))];
 
     let mut session = Session::with_messages(vec![serde_json::json!({
         "role": "system", "content": FIX_SYSTEM_PROMPT
     })]);
 
-    let analyze_prompt = format!(
-        "Analyse the user's problem. Gather system info with read-only commands.\n\n\
-         User's problem:\n{}\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"summary\": \"<concise summary>\", \"system_info\": \"<relevant info>\"}}",
-        problem
-    );
+    let analyze_prompt = render(CUSTOM_FIX_ANALYZE_TEMPLATE, &[("problem", problem)]);
 
     struct DynStep { id: &'static str, prompt: String }
 
     let steps = vec![
         DynStep { id: "analyze", prompt: analyze_prompt },
-        DynStep { id: "diagnose", prompt: "\
-Based on your analysis, diagnose the root cause. Run additional diagnostic commands if needed.\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"root_cause\": \"<identified root cause>\", \"details\": \"<explanation>\"}".to_string() },
-        DynStep { id: "fix", prompt: "\
-Fix the diagnosed issue. You CAN and SHOULD modify system state.\n\
-IMPORTANT: If you modify ~/.openclaw/openclaw.json, run 'openclaw gateway restart' afterwards.\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"actions\": [\"<action1>\", ...], \"details\": \"<summary>\"}\n\
-On failure: {\"success\": false, \"error\": \"<why the fix did not work>\"}".to_string() },
-        DynStep { id: "verify", prompt: "\
-Verify the fix resolved the problem. Re-run checks that were failing.\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"verified\": true, \"details\": \"<verification results>\"}\n\
-If still broken: {\"success\": true, \"verified\": false, \"details\": \"<what is still broken>\"}".to_string() },
+        DynStep { id: "diagnose", prompt: CUSTOM_FIX_DIAGNOSE_TEMPLATE.to_string() },
+        DynStep { id: "fix", prompt: CUSTOM_FIX_FIX_TEMPLATE.to_string() },
+        DynStep { id: "verify", prompt: CUSTOM_FIX_VERIFY_TEMPLATE.to_string() },
     ];
 
     for step in &steps {

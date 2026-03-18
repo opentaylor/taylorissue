@@ -6,97 +6,44 @@ use tauri::{AppHandle, Manager};
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
 use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
+use crate::prompts::render;
 use crate::services::step_runner::{run_step, run_step_dynamic, StepDef};
 
-const SYSTEM_PROMPT: &str = "\
-You are an automated installer for OpenClaw. \
-You execute shell commands one at a time and report results as JSON. \
-You MUST respond with ONLY a valid JSON object — no markdown, no explanation. \
-If a step fails, set \"success\" to false with the reason in \"error\". \
-IMPORTANT: Run scripts ONE AT A TIME, sequentially. Never combine or parallelize them.";
+pub const SYSTEM_PROMPT: &str = include_str!("../prompts/install/system.md");
 
-static STEP_DETECT_ENV: StepDef = StepDef {
+pub static STEP_DETECT_ENV: StepDef = StepDef {
     id: "detectEnv",
-    prompt: "\
-Detect the current system environment.\n\
-Run: uname -s && uname -r && uname -m && df -h /\n\
-On macOS also run: sw_vers\n\n\
-Respond with ONLY this JSON:\n\
-{\"success\": true, \"os\": \"<OS name and version>\", \
-\"arch\": \"<CPU architecture>\", \
-\"disk_free\": \"<free disk space with unit>\"}\n\
-On failure: {\"success\": false, \"error\": \"<reason>\"}",
+    prompt: include_str!("../prompts/install/detect_env.md"),
 };
 
-fn build_script_prompt(script_path: &str, label: &str, verify_cmd: &str, json_tpl: &str) -> String {
-    format!(
-        "{label}\n\
-         Run this exact command:\n  bash {script_path}\n\n\
-         Do NOT use sudo. Do NOT modify the script or download a different one.\n\
-         Set timeout to 300 for this command.\n\n\
-         After the script finishes, verify: {verify_cmd}\n\
-         Respond with ONLY this JSON:\n{json_tpl}\n\
-         On failure: {{\"success\": false, \"error\": \"<reason>\"}}"
-    )
+pub const SCRIPT_TEMPLATE: &str = include_str!("../prompts/install/script.md");
+pub const CONFIGURE_TEMPLATE: &str = include_str!("../prompts/install/configure.md");
+pub const VERIFY_TEMPLATE: &str = include_str!("../prompts/install/verify.md");
+
+pub fn build_script_prompt(script_path: &str, label: &str, verify_cmd: &str, json_tpl: &str) -> String {
+    render(SCRIPT_TEMPLATE, &[
+        ("label", label),
+        ("script_path", script_path),
+        ("verify_cmd", verify_cmd),
+        ("json_tpl", json_tpl),
+    ])
 }
 
-fn build_configure_prompt(config: &AppConfig) -> String {
-    format!(
-        "Configure OpenClaw with the user's model provider.\n\n\
-         Step 1 — Run onboard (copy verbatim, do NOT change any values):\n\n\
-         openclaw onboard --non-interactive \\\n\
-           --mode local \\\n\
-           --auth-choice custom-api-key \\\n\
-           --custom-base-url '{base_url}' \\\n\
-           --custom-model-id '{model}' \\\n\
-           --custom-api-key '{api_key}' \\\n\
-           --custom-compatibility openai \\\n\
-           --accept-risk \\\n\
-           --gateway-port {port} \\\n\
-           --gateway-bind loopback \\\n\
-           --install-daemon \\\n\
-           --skip-skills \\\n\
-           --skip-channels \\\n\
-           --skip-search\n\n\
-         Step 2 — Patch the model limits (onboard defaults are too low for most models):\n\n\
-         python3 -c \"\nimport json, pathlib\n\
-         p = pathlib.Path.home() / '.openclaw' / 'openclaw.json'\n\
-         c = json.loads(p.read_text())\n\
-         for prov in c.get('models', {{}}).get('providers', {{}}).values():\n\
-             for m in prov.get('models', []):\n\
-                 m['contextWindow'] = 1000000\n\
-                 m['maxTokens'] = 32768\n\
-         p.write_text(json.dumps(c, indent=2))\n\
-         print('patched contextWindow=1000000 maxTokens=32768')\n\"\n\n\
-         Step 3 — Restart the gateway so it picks up the patched config:\n\n\
-           openclaw gateway restart\n\n\
-         After all three steps finish, verify: ls ~/.openclaw/openclaw.json\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"config_path\": \"<path to config file>\", \
-         \"details\": \"<brief summary>\"}}\n\
-         On failure: {{\"success\": false, \"error\": \"<reason>\"}}",
-        base_url = config.base_url,
-        model = config.model,
-        api_key = config.api_key,
-        port = config.gateway_port,
-    )
+pub fn build_configure_prompt(config: &AppConfig) -> String {
+    render(CONFIGURE_TEMPLATE, &[
+        ("base_url", &config.base_url),
+        ("model", &config.model),
+        ("api_key", &config.api_key),
+        ("port", &config.gateway_port.to_string()),
+    ])
 }
 
-fn build_verify_prompt(config: &AppConfig) -> String {
-    format!(
-        "Verify the OpenClaw gateway is healthy.\n\
-         Run these commands in order:\n\
-           openclaw gateway status\n\
-           openclaw health\n\n\
-         If gateway status shows it is not running, start it:\n\
-           openclaw gateway --port {port} &\n\
-         Then re-check: openclaw gateway status\n\n\
-         Respond with ONLY this JSON:\n\
-         {{\"success\": true, \"status\": \"<running|stopped>\", \"port\": <port number>}}\n\
-         On failure: {{\"success\": false, \"error\": \"<reason>\"}}",
-        port = config.gateway_port,
-    )
+pub fn build_verify_prompt(config: &AppConfig) -> String {
+    render(VERIFY_TEMPLATE, &[
+        ("port", &config.gateway_port.to_string()),
+    ])
 }
 
 struct ResolvedScripts {
@@ -106,16 +53,17 @@ struct ResolvedScripts {
 }
 
 fn resolve_scripts(app: &AppHandle) -> ResolvedScripts {
+    let ext = if cfg!(windows) { "ps1" } else { "sh" };
     let resolve = |name: &str| -> String {
         app.path()
-            .resolve(&format!("scripts/{name}"), BaseDirectory::Resource)
+            .resolve(&format!("scripts/{name}.{ext}"), BaseDirectory::Resource)
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default()
     };
     ResolvedScripts {
-        git: resolve("install-git.sh"),
-        node: resolve("install-node.sh"),
-        openclaw: resolve("install-openclaw.sh"),
+        git: resolve("install-git"),
+        node: resolve("install-node"),
+        openclaw: resolve("install-openclaw"),
     }
 }
 
@@ -162,6 +110,7 @@ pub async fn run_install(
     agent.name = "InstallRunner".to_string();
     agent.llm = Some(Box::new(llm));
     agent.tools = vec![Box::new(BashTool::new())];
+    agent.middlewares = vec![Box::new(LoggingMiddleware::new("install"))];
 
     let mut session = Session::with_messages(vec![serde_json::json!({
         "role": "system", "content": SYSTEM_PROMPT

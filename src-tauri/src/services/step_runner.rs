@@ -195,3 +195,123 @@ pub async fn run_step_dynamic(
     }));
     false
 }
+
+/// Channel-free variant of `run_step_dynamic` for use in tests.
+/// Returns the parsed JSON on success, or an error string on failure.
+pub async fn run_step_standalone(
+    agent: &mut Agent,
+    session: &mut Session,
+    step_id: &str,
+    prompt: &str,
+    max_retries: usize,
+) -> Result<Value, String> {
+    let mut last_error = String::new();
+    let mut is_first_attempt = true;
+
+    for attempt in 0..max_retries {
+        if is_first_attempt {
+            session.messages.push(serde_json::json!({
+                "role": "user",
+                "content": prompt
+            }));
+            is_first_attempt = false;
+        }
+
+        let before = session.messages.len();
+        let kwargs = HashMap::new();
+        let result = agent.run(session.clone(), None, kwargs).await;
+
+        match result {
+            Ok(updated) => {
+                *session = updated;
+            }
+            Err(e) => {
+                last_error = e.to_string();
+                session.messages.push(serde_json::json!({
+                    "role": "user",
+                    "content": format!(
+                        "The previous attempt raised an exception:\n{}\n\n\
+                         Analyse the error, fix the root cause, and try again. \
+                         Respond with the same JSON schema.",
+                        last_error
+                    )
+                }));
+                continue;
+            }
+        }
+
+        let text = session.messages[before..]
+            .iter()
+            .rev()
+            .find(|m| {
+                m.get("role").and_then(|v| v.as_str()) == Some("assistant")
+                    && m.get("content")
+                        .and_then(|v| v.as_str())
+                        .map(|s| !s.is_empty())
+                        .unwrap_or(false)
+                    && m.get("tool_calls").is_none()
+            })
+            .and_then(|m| m.get("content").and_then(|v| v.as_str()))
+            .unwrap_or("");
+
+        if text.is_empty() || text.starts_with("LLM call failed:") || text.starts_with("Error:") {
+            last_error = if text.is_empty() {
+                "Agent produced no response (LLM call may have failed — check API key and endpoint)".to_string()
+            } else {
+                text.to_string()
+            };
+            log::error!("Step '{}': {}", step_id, last_error);
+            break;
+        }
+
+        let parsed = extract_json(text);
+
+        if parsed.is_none() {
+            last_error = format!("Agent response was not valid JSON: {}", &text[..text.len().min(200)]);
+            log::warn!("Step '{}': {}", step_id, last_error);
+            if attempt < max_retries - 1 {
+                session.messages.push(serde_json::json!({
+                    "role": "user",
+                    "content": format!(
+                        "Your response was not valid JSON. Here is what you said:\n{}\n\n\
+                         Please respond with ONLY a valid JSON object matching the required schema.",
+                        text
+                    )
+                }));
+                continue;
+            }
+            break;
+        }
+
+        if let Some(ref p) = parsed {
+            if p.get("success").and_then(|v| v.as_bool()) == Some(false) {
+                last_error = p
+                    .get("error")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Step failed")
+                    .to_string();
+                if attempt < max_retries - 1 {
+                    session.messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": format!(
+                            "The previous attempt failed: {}\n\n\
+                             Analyse the error, fix the root cause, and try again. \
+                             Respond with the same JSON schema.",
+                            last_error
+                        )
+                    }));
+                    continue;
+                }
+                break;
+            }
+        }
+
+        return Ok(parsed.unwrap());
+    }
+
+    Err(if last_error.is_empty() {
+        format!("Step '{}' failed after retries", step_id)
+    } else {
+        format!("Step '{}': {}", step_id, last_error)
+    })
+}

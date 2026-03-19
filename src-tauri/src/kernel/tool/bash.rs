@@ -173,7 +173,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_workdir() {
-        let tmp = std::env::temp_dir();
+        let tmp = std::env::temp_dir().canonicalize().unwrap_or_else(|_| std::env::temp_dir());
         let tool = BashTool::new().with_workdir(tmp.clone());
         #[cfg(windows)]
         let cmd = "(Get-Location).Path";

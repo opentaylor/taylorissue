@@ -183,11 +183,14 @@ mod tests {
             .run(serde_json::json!({"command": cmd}))
             .await
             .unwrap();
-        let tmp_lower = tmp.to_string_lossy().to_lowercase();
-        let result_lower = result.to_lowercase().replace('/', "\\");
+        let normalize = |s: &str| {
+            let s = s.trim().to_lowercase().replace('\\', "/");
+            s.strip_prefix("//?/").unwrap_or(&s).to_string()
+        };
+        let result_norm = normalize(&result);
+        let tmp_norm = normalize(&tmp.to_string_lossy());
         assert!(
-            result_lower.contains(tmp_lower.trim_end_matches('\\'))
-                || result_lower.contains(tmp_lower.trim_end_matches('/')),
+            result_norm.contains(tmp_norm.trim_end_matches('/')),
             "workdir output should contain temp path; got: {result:?}"
         );
     }

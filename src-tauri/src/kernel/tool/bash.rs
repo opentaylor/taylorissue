@@ -55,9 +55,9 @@ impl BaseTool for BashTool {
 
     fn params_schema(&self) -> Value {
         #[cfg(windows)]
-        let cmd_desc = "The PowerShell command to execute (runs via powershell.exe -Command)";
+        let cmd_desc = "The PowerShell command to execute";
         #[cfg(not(windows))]
-        let cmd_desc = "The bash shell command to execute (runs via sh -c)";
+        let cmd_desc = "The bash shell command to execute";
 
         serde_json::json!({
             "type": "object",
@@ -80,8 +80,14 @@ impl BaseTool for BashTool {
         let mut cmd = {
             #[cfg(windows)]
             {
+                const CREATE_NO_WINDOW: u32 = 0x08000000;
+                let wrapped = format!(
+                    "$ErrorActionPreference='Continue'; {}",
+                    command
+                );
                 let mut c = Command::new("powershell.exe");
-                c.args(["-NoProfile", "-NonInteractive", "-Command", command]);
+                c.args(["-NoProfile", "-NonInteractive", "-Command", &wrapped]);
+                c.creation_flags(CREATE_NO_WINDOW);
                 c
             }
             #[cfg(not(windows))]

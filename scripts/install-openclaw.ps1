@@ -57,8 +57,29 @@ function Refresh-PathFromRegistry {
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
 }
 
+function Get-OpenClawHome {
+    return (Join-Path $env:LOCALAPPDATA "taylorissue\app")
+}
+
+function Get-OpenClawBinDir {
+    return (Join-Path (Get-OpenClawHome) "node_modules\.bin")
+}
+
+function Persist-OpenClawBin {
+    $binDir = Get-OpenClawBinDir
+    Add-ToProcessPath $binDir
+    $currentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if ($currentUserPath -and ($currentUserPath -split ";" | Where-Object { $_ -ieq $binDir })) { return }
+    [Environment]::SetEnvironmentVariable("Path", "$binDir;$currentUserPath", "User")
+    Write-Info "Added $binDir to user PATH"
+}
+
 function Install-OpenClaw {
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
     $spec = "openclaw@latest"
+    $appDir = Get-OpenClawHome
 
     try {
         $npmCmd = Get-NpmCommandPath
@@ -68,10 +89,17 @@ function Install-OpenClaw {
         if ($resolved) { Write-Info "Target: OpenClaw v$($resolved.Trim())" }
     } catch {}
 
-    Write-Info "Running: npm install -g $spec"
+    New-Item -ItemType Directory -Force -Path $appDir 2>$null | Out-Null
+
+    $pkgJson = Join-Path $appDir "package.json"
+    if (-not (Test-Path $pkgJson)) {
+        '{"private":true}' | Out-File -Encoding utf8 -FilePath $pkgJson
+    }
 
     $npmCmd = Get-NpmCommandPath
     & $npmCmd cache clean --force 2>$null | Out-Null
+
+    Write-Info "Installing OpenClaw to $appDir (no admin required)"
 
     $prevLogLevel          = $env:NPM_CONFIG_LOGLEVEL
     $prevUpdateNotifier    = $env:NPM_CONFIG_UPDATE_NOTIFIER
@@ -89,30 +117,27 @@ function Install-OpenClaw {
     $env:NODE_LLAMA_CPP_SKIP_DOWNLOAD = "1"
     $env:SHARP_IGNORE_GLOBAL_LIBVIPS  = "1"
 
-    $installArgs = @("install", "-g", $spec)
+    $installArgs = @("install", $spec)
     if ($script:USE_CN) { $installArgs += @("--registry", $script:CN_NPM) }
 
     try {
-        $npmOutput = & $npmCmd @installArgs 2>&1
+        $npmOutput = & $npmCmd @installArgs --prefix $appDir 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-OK "OpenClaw npm package installed"
+            Persist-OpenClawBin
+            Write-OK "OpenClaw installed"
             return
         }
 
         Write-Warn "First attempt failed - cleaning and retrying"
         & $npmCmd cache clean --force 2>$null | Out-Null
 
-        try {
-            $npmRoot = (& $npmCmd root -g 2>$null).Trim()
-            if ($npmRoot) {
-                $ocDir = Join-Path $npmRoot "openclaw"
-                if (Test-Path $ocDir) { Remove-Item -Recurse -Force $ocDir 2>$null }
-            }
-        } catch {}
+        $ocDir = Join-Path $appDir "node_modules\openclaw"
+        if (Test-Path $ocDir) { Remove-Item -Recurse -Force $ocDir 2>$null }
 
-        $npmOutput = & $npmCmd @installArgs 2>&1
+        $npmOutput = & $npmCmd @installArgs --prefix $appDir 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-OK "OpenClaw npm package installed (retry succeeded)"
+            Persist-OpenClawBin
+            Write-OK "OpenClaw installed (retry succeeded)"
             return
         }
 
@@ -120,6 +145,7 @@ function Install-OpenClaw {
         $npmOutput | ForEach-Object { Write-Host $_ }
         Write-Die "Could not install OpenClaw. See output above."
     } finally {
+        $ErrorActionPreference = $prevEAP
         $env:NPM_CONFIG_LOGLEVEL          = $prevLogLevel
         $env:NPM_CONFIG_UPDATE_NOTIFIER   = $prevUpdateNotifier
         $env:NPM_CONFIG_FUND              = $prevFund
@@ -146,6 +172,9 @@ function Get-NpmGlobalBinCandidates {
 function Verify-OpenClaw {
     Refresh-PathFromRegistry
 
+    $binDir = Get-OpenClawBinDir
+    if (Test-Path $binDir) { Add-ToProcessPath $binDir }
+
     $npmPrefix = $null
     try {
         $npmPrefix = (& (Get-NpmCommandPath) config get prefix 2>$null).Trim()
@@ -169,10 +198,7 @@ function Verify-OpenClaw {
     } else {
         Write-Warn "Installed, but 'openclaw' not on PATH"
         Write-Info "Try opening a new terminal."
-        if ($npmBins.Count -gt 0) {
-            Write-Info "Or add one of these to your PATH:"
-            foreach ($b in $npmBins) { Write-Info "  $b" }
-        }
+        Write-Info "Binary should be at: $binDir"
     }
 }
 

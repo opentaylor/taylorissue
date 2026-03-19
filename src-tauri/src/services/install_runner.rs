@@ -52,19 +52,92 @@ struct ResolvedScripts {
     openclaw: String,
 }
 
+/// On Windows, PowerShell 5.1 cannot handle non-ASCII characters in paths
+/// passed via `-Command`. When a resolved path contains non-ASCII chars
+/// (e.g. the app name 一修哥), copy the script to an ASCII-safe directory.
+/// Also strips the Windows `\\?\` extended-length path prefix that Tauri's
+/// resource resolver may produce, since PowerShell doesn't handle it well.
+fn safe_script_path(source: &std::path::Path, filename: &str) -> String {
+    let s = source.to_string_lossy();
+    let s = s.strip_prefix(r"\\?\").unwrap_or(&s);
+    if s.is_ascii() {
+        return s.to_string();
+    }
+    let scripts_dir = taylorissue_dir().join("scripts");
+    if std::fs::create_dir_all(&scripts_dir).is_err() {
+        log::error!("Failed to create script dir: {}", scripts_dir.display());
+        return s.to_string();
+    }
+    let dest = scripts_dir.join(filename);
+    match std::fs::copy(source, &dest) {
+        Ok(_) => {
+            log::info!("Copied script to ASCII-safe path: {}", dest.display());
+            dest.to_string_lossy().to_string()
+        }
+        Err(e) => {
+            log::error!("Failed to copy script to temp: {e}");
+            s.to_string()
+        }
+    }
+}
+
+/// Returns the platform-specific taylorissue data directory.
+/// Windows: %LOCALAPPDATA%\taylorissue
+/// macOS/Linux: ~/.taylorissue
+fn taylorissue_dir() -> std::path::PathBuf {
+    #[cfg(windows)]
+    {
+        std::env::var("LOCALAPPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| {
+                dirs::home_dir()
+                    .unwrap_or_default()
+                    .join("AppData")
+                    .join("Local")
+            })
+            .join("taylorissue")
+    }
+    #[cfg(not(windows))]
+    {
+        dirs::home_dir()
+            .unwrap_or_default()
+            .join(".taylorissue")
+    }
+}
+
 fn resolve_scripts(app: &AppHandle) -> ResolvedScripts {
     let ext = if cfg!(windows) { "ps1" } else { "sh" };
     let resolve = |name: &str| -> String {
-        app.path()
-            .resolve(&format!("scripts/{name}.{ext}"), BaseDirectory::Resource)
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default()
+        let relative = format!("scripts/{name}.{ext}");
+        let filename = format!("{name}.{ext}");
+
+        let found = app
+            .path()
+            .resolve(&relative, BaseDirectory::Resource)
+            .ok()
+            .filter(|p| p.exists())
+            .or_else(|| {
+                std::env::current_exe().ok().and_then(|exe| {
+                    let p = exe.parent()?.join(&relative);
+                    p.exists().then_some(p)
+                })
+            });
+
+        match found {
+            Some(path) => safe_script_path(&path, &filename),
+            None => {
+                log::error!("Script not found anywhere: {}", relative);
+                String::new()
+            }
+        }
     };
-    ResolvedScripts {
+    let scripts = ResolvedScripts {
         git: resolve("install-git"),
         node: resolve("install-node"),
         openclaw: resolve("install-openclaw"),
-    }
+    };
+    log::info!("[install] script paths: git={}, node={}, openclaw={}", scripts.git, scripts.node, scripts.openclaw);
+    scripts
 }
 
 fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
@@ -144,7 +217,7 @@ pub async fn run_install(
     let node_prompt = build_script_prompt(
         &scripts.node,
         "Install Node.js using the bundled script.",
-        "node --version && npm --version",
+        "node --version; npm --version",
         "{\"success\": true, \"version\": \"<node version>\"}",
     );
     step!("installNode", node_prompt);

@@ -6,7 +6,8 @@ On macOS/Linux, run this exact command:
 On Windows (PowerShell), run this exact command:
   & '{script_path}'
 
-Do NOT use sudo. Do NOT modify the script or download a different one.
+Do NOT modify the script or download a different one.
+The script handles privilege escalation internally — do NOT prepend sudo or Run-As.
 Set timeout to 300 for this command.
 
 After the script finishes, verify: {verify_cmd}

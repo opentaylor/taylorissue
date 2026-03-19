@@ -28,19 +28,25 @@ fn path_entry_count(path: &str) -> usize {
 /// reduced PATH. This function resolves a fuller PATH once and caches it.
 pub fn full_path() -> &'static str {
     RESOLVED_PATH.get_or_init(|| {
-        if let Some(p) = path_from_login_shell() {
-            log::info!(
-                "[shell_env] resolved PATH from login shell ({} entries)",
-                path_entry_count(&p)
-            );
-            return p;
-        }
-        let enriched = enriched_fallback();
+        let base = match path_from_login_shell() {
+            Some(p) => {
+                log::info!(
+                    "[shell_env] resolved PATH from login shell ({} entries)",
+                    path_entry_count(&p)
+                );
+                p
+            }
+            None => {
+                log::info!("[shell_env] login shell resolution failed, using process PATH");
+                std::env::var("PATH").unwrap_or_default()
+            }
+        };
+        let merged = merge_extra_paths(&base);
         log::info!(
-            "[shell_env] using fallback PATH ({} entries)",
-            path_entry_count(&enriched)
+            "[shell_env] final PATH ({} entries)",
+            path_entry_count(&merged)
         );
-        enriched
+        merged
     })
 }
 
@@ -73,12 +79,15 @@ fn path_from_login_shell() -> Option<String> {
 
 #[cfg(windows)]
 fn path_from_login_shell() -> Option<String> {
-    // Merge Machine + User PATH the same way Windows does for interactive sessions.
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
     let ps = r#"Write-Output ("__PATH_START__" + ([Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')) + "__PATH_END__")"#;
     let output = Command::new("powershell.exe")
         .args(["-NoProfile", "-NonInteractive", "-Command", ps])
         .stdin(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
         .ok()?;
     if !output.status.success() {
@@ -99,14 +108,14 @@ fn path_from_login_shell() -> Option<String> {
 }
 
 #[cfg(not(windows))]
-fn enriched_fallback() -> String {
-    let current = std::env::var("PATH").unwrap_or_default();
+fn merge_extra_paths(base: &str) -> String {
     let home = dirs::home_dir()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
 
     let extra_dirs = [
+        format!("{}/.taylorissue/app/node_modules/.bin", home),
         "/usr/local/bin".to_string(),
         "/opt/homebrew/bin".to_string(),
         "/opt/homebrew/sbin".to_string(),
@@ -117,7 +126,7 @@ fn enriched_fallback() -> String {
         format!("{}/.nvm/versions/node", home),
     ];
 
-    let mut parts: Vec<String> = current.split(':').map(String::from).collect();
+    let mut parts: Vec<String> = base.split(':').map(String::from).collect();
 
     if let Ok(nvm_dir) = glob_latest_nvm_bin(&home) {
         if !parts.contains(&nvm_dir) {
@@ -135,18 +144,24 @@ fn enriched_fallback() -> String {
 }
 
 #[cfg(windows)]
-fn enriched_fallback() -> String {
-    let current = std::env::var("PATH").unwrap_or_default();
+fn merge_extra_paths(base: &str) -> String {
     let home = dirs::home_dir()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
+
+    let local_app_data = std::env::var("LOCALAPPDATA")
+        .unwrap_or_else(|_| format!(r"{home}\AppData\Local"));
 
     let program_files = std::env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
     let program_files_x86 = std::env::var("ProgramFiles(x86)")
         .unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
 
     let extra_dirs = vec![
+        format!(r"{local_app_data}\taylorissue\app\node_modules\.bin"),
+        format!(r"{local_app_data}\taylorissue\deps\portable-git\cmd"),
+        format!(r"{local_app_data}\taylorissue\deps\portable-git\mingw64\bin"),
+        format!(r"{local_app_data}\taylorissue\deps\nodejs"),
         format!(r"{}\.cargo\bin", home),
         format!(r"{program_files}\Git\bin"),
         format!(r"{program_files}\Git\cmd"),
@@ -154,12 +169,10 @@ fn enriched_fallback() -> String {
         format!(r"{program_files_x86}\Git\bin"),
         format!(r"{program_files}\nodejs"),
         format!(r"{home}\AppData\Roaming\npm"),
-        std::env::var("LOCALAPPDATA")
-            .map(|l| format!(r"{l}\Programs"))
-            .unwrap_or_default(),
+        format!(r"{local_app_data}\Programs"),
     ];
 
-    let mut parts: Vec<String> = current
+    let mut parts: Vec<String> = base
         .split(';')
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())

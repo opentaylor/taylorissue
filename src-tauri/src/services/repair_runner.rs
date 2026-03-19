@@ -7,10 +7,12 @@ use crate::kernel::llm::openai::OpenAiLlm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::prompts::render;
+use crate::services::openclaw_ref;
 use crate::services::step_runner::{run_step_dynamic, StepDef};
 
 pub const SYSTEM_PROMPT: &str = include_str!("../prompts/repair/system.md");
 pub const FIX_SYSTEM_PROMPT: &str = include_str!("../prompts/repair/fix_system.md");
+const OPENCLAW_REF_TEMPLATE: &str = include_str!("../prompts/repair/openclaw_ref.md");
 
 pub const CHECK_GATEWAY_TEMPLATE: &str = include_str!("../prompts/repair/check_gateway.md");
 pub const CHECK_CONFIG_TEMPLATE: &str = include_str!("../prompts/repair/check_config.md");
@@ -52,8 +54,6 @@ pub fn build_check_model_request_prompt(config: &AppConfig) -> String {
         ("completions_url", &completions_url),
         ("api_key", &config.api_key),
         ("model", &config.model),
-        ("port", &config.gateway_port.to_string()),
-        ("gateway_token", &config.gateway_token),
     ])
 }
 
@@ -96,6 +96,16 @@ fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
     details
 }
 
+fn build_system_prompt(base: &str, ref_path: Option<&str>) -> String {
+    match ref_path {
+        Some(path) => {
+            let ref_section = render(OPENCLAW_REF_TEMPLATE, &[("ref_path", path)]);
+            format!("{base}{ref_section}")
+        }
+        None => base.to_string(),
+    }
+}
+
 fn has_issue(step_id: &str, parsed: &Value) -> bool {
     match step_id {
         "checkGateway" => {
@@ -127,6 +137,9 @@ pub async fn run_repair(
     config: AppConfig,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let ref_path = openclaw_ref::ensure_openclaw_ref().await;
+    let system_prompt = build_system_prompt(SYSTEM_PROMPT, ref_path.as_deref());
+
     let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "RepairRunner".to_string();
@@ -135,7 +148,7 @@ pub async fn run_repair(
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("repair"))];
 
     let mut session = Session::with_messages(vec![serde_json::json!({
-        "role": "system", "content": SYSTEM_PROMPT
+        "role": "system", "content": system_prompt
     })]);
 
     let gateway_prompt = build_check_gateway_prompt(&config);
@@ -161,6 +174,9 @@ pub async fn run_fix(
     issue_description: &str,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let ref_path = openclaw_ref::ensure_openclaw_ref().await;
+    let system_prompt = build_system_prompt(FIX_SYSTEM_PROMPT, ref_path.as_deref());
+
     let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "FixRunner".to_string();
@@ -174,7 +190,7 @@ pub async fn run_fix(
     ]);
 
     let mut session = Session::with_messages(vec![serde_json::json!({
-        "role": "system", "content": FIX_SYSTEM_PROMPT
+        "role": "system", "content": system_prompt
     })]);
 
     run_step_dynamic(&mut agent, &mut session, "fix", &prompt, &channel, 16, None, None).await;
@@ -188,6 +204,9 @@ pub async fn run_custom_fix(
     problem: &str,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let ref_path = openclaw_ref::ensure_openclaw_ref().await;
+    let system_prompt = build_system_prompt(FIX_SYSTEM_PROMPT, ref_path.as_deref());
+
     let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "CustomFixRunner".to_string();
@@ -196,7 +215,7 @@ pub async fn run_custom_fix(
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("custom_fix"))];
 
     let mut session = Session::with_messages(vec![serde_json::json!({
-        "role": "system", "content": FIX_SYSTEM_PROMPT
+        "role": "system", "content": system_prompt
     })]);
 
     let analyze_prompt = render(CUSTOM_FIX_ANALYZE_TEMPLATE, &[("problem", problem)]);

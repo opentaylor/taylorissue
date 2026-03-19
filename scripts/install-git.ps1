@@ -52,7 +52,7 @@ function Check-Git {
 }
 
 function Get-PortableGitRoot {
-    $base = Join-Path $env:LOCALAPPDATA "OpenClaw\deps"
+    $base = Join-Path $env:LOCALAPPDATA "taylorissue\deps"
     return (Join-Path $base "portable-git")
 }
 

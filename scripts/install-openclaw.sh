@@ -37,30 +37,53 @@ npm_reg() {
     [[ "$USE_CN" == "1" ]] && echo "--registry $CN_NPM"
 }
 
+OPENCLAW_HOME="$HOME/.taylorissue/app"
+OPENCLAW_BIN="$OPENCLAW_HOME/node_modules/.bin"
+
+persist_openclaw_bin() {
+    case ":$PATH:" in
+        *":${OPENCLAW_BIN}:"*) return ;;
+    esac
+    export PATH="${OPENCLAW_BIN}:$PATH"
+    local rc=""
+    [[ -f "$HOME/.zshrc" ]] && rc="$HOME/.zshrc"
+    [[ -z "$rc" && -f "$HOME/.bashrc" ]] && rc="$HOME/.bashrc"
+    if [[ -n "$rc" ]]; then
+        if ! grep -qF "$OPENCLAW_BIN" "$rc" 2>/dev/null; then
+            printf '\nexport PATH="%s:$PATH"\n' "$OPENCLAW_BIN" >> "$rc"
+            info "Added $OPENCLAW_BIN to $rc"
+        fi
+    fi
+}
+
 install_openclaw() {
     local spec="openclaw@latest"
     local resolved
     resolved="$(npm view $spec version $(npm_reg) 2>/dev/null || true)"
     [[ -n "$resolved" ]] && info "Target: OpenClaw v${resolved}"
 
-    info "Running: npm install -g ${spec}"
+    mkdir -p "$OPENCLAW_HOME"
+    [[ ! -f "$OPENCLAW_HOME/package.json" ]] && echo '{"private":true}' > "$OPENCLAW_HOME/package.json"
+
+    info "Installing OpenClaw to $OPENCLAW_HOME (no admin required)"
     npm cache clean --force >/dev/null 2>&1 || true
     local log; log="$(mktemp)"
-    local cmd=(env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm --loglevel error --no-fund --no-audit install -g "$spec")
+    local cmd=(env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm --loglevel error --no-fund --no-audit install "$spec" --prefix "$OPENCLAW_HOME")
     [[ "$USE_CN" == "1" ]] && cmd+=(--registry "$CN_NPM")
 
     if "${cmd[@]}" >"$log" 2>&1; then
-        ok "OpenClaw npm package installed"
+        persist_openclaw_bin
+        ok "OpenClaw installed"
         rm -f "$log"
         return
     fi
 
     warn "First attempt failed — cleaning and retrying"
-    local npm_root; npm_root="$(npm root -g 2>/dev/null || true)"
-    [[ -n "$npm_root" ]] && rm -rf "$npm_root"/openclaw "$npm_root"/.openclaw-* 2>/dev/null || true
+    rm -rf "$OPENCLAW_HOME/node_modules/openclaw" "$OPENCLAW_HOME/node_modules/.openclaw-"* 2>/dev/null || true
 
     if "${cmd[@]}" >"$log" 2>&1; then
-        ok "OpenClaw npm package installed (retry succeeded)"
+        persist_openclaw_bin
+        ok "OpenClaw installed (retry succeeded)"
         rm -f "$log"
         return
     fi
@@ -74,8 +97,7 @@ install_openclaw() {
 
 verify_openclaw() {
     hash -r 2>/dev/null || true
-    local npm_bin; npm_bin="$(npm prefix -g 2>/dev/null || true)"
-    [[ -n "$npm_bin" ]] && export PATH="${npm_bin}/bin:$PATH"
+    [[ -d "$OPENCLAW_BIN" ]] && export PATH="${OPENCLAW_BIN}:$PATH"
 
     if command -v openclaw >/dev/null 2>&1; then
         local ver; ver="$(openclaw --version 2>/dev/null | head -1 || echo unknown)"
@@ -83,8 +105,7 @@ verify_openclaw() {
     else
         warn "Installed, but 'openclaw' not on PATH"
         info "Try: hash -r  (or open a new terminal)"
-        local bin_dir; bin_dir="$(npm prefix -g 2>/dev/null || true)/bin"
-        info "Or add to ~/.zshrc:  export PATH=\"${bin_dir}:\$PATH\""
+        info "Binary should be at: $OPENCLAW_BIN"
     fi
 }
 

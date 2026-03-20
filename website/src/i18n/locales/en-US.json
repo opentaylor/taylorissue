@@ -1,0 +1,87 @@
+{
+  "nav": {
+    "features": "Features",
+    "download": "Download",
+    "changelog": "Changelog"
+  },
+  "hero": {
+    "title": "TaylorIssue",
+    "subtitle": "The world's only OpenClaw repair software.",
+    "subtitleLine2": "An agent that manages agents.",
+    "description": "No technical skills needed to install. No money needed to repair. Install, use, repair, and uninstall — TaylorIssue helps you finish everything in one go.",
+    "downloadFor": "Download for {{platform}}",
+    "download": "Download",
+    "loading": "Loading...",
+    "viewOnGitHub": "View on GitHub"
+  },
+  "features": {
+    "title": "Core Features",
+    "subtitle": "Everything you need to install, use, repair, and manage OpenClaw — without ever touching the terminal.",
+    "install": {
+      "title": "One-Click Install",
+      "description": "AI-guided flow that auto-detects your environment and installs Git, Node.js, and OpenClaw for you."
+    },
+    "repair": {
+      "title": "One-Click Repair",
+      "description": "System scan, automatic diagnostics, and fixes for common issues, plus AI-powered diagnosis for custom problems."
+    },
+    "uninstall": {
+      "title": "One-Click Uninstall",
+      "description": "Granular cleanup options for services, packages, workspace, config, and data."
+    },
+    "chat": {
+      "title": "Agent Chat",
+      "description": "Talk to your OpenClaw agents directly from the app. Select from available agents and start a conversation."
+    },
+    "skills": {
+      "title": "Skill Management",
+      "description": "Browse, install, and manage agent skills from both local sources and the ClawHub community marketplace."
+    },
+    "model": {
+      "title": "Model Configuration",
+      "description": "Set up your LLM provider in seconds, with a built-in guide to free API providers."
+    }
+  },
+  "download": {
+    "title": "Download",
+    "subtitle": "Get TaylorIssue {{version}} for your platform.",
+    "loading": "Loading downloads...",
+    "macOS": "macOS",
+    "windows": "Windows",
+    "noMac": "No macOS builds available yet.",
+    "noWin": "No Windows builds available yet.",
+    "viewAll": "View all releases & older versions"
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "What's new in TaylorIssue.",
+    "newFeatures": "New Features",
+    "changes": "Changes",
+    "viewFull": "View full release history on GitHub",
+    "items": {
+      "install": "One-click install with AI-guided flow that auto-detects your environment and installs Git, Node.js, and OpenClaw for you",
+      "repair": "One-click repair with system scan, automatic diagnostics, and fixes for common issues, plus custom issue descriptions for AI-powered diagnosis",
+      "uninstall": "One-click uninstall with granular cleanup options for services, packages, workspace, config, and data",
+      "chat": "Agent chat that lets you talk to your OpenClaw agents directly from the app",
+      "skills": "Skill management for browsing, installing, and managing agent skills from both local sources and the ClawHub community marketplace",
+      "model": "Model configuration that sets up your LLM provider in seconds, with a built-in guide to free API providers"
+    }
+  },
+  "footer": {
+    "description": "The world's only OpenClaw repair software. An agent that manages agents.",
+    "links": "Links",
+    "releases": "Releases",
+    "reportIssue": "Report an Issue",
+    "acknowledgements": "Acknowledgements",
+    "maintainer": "Maintainer",
+    "sponsor": "Sponsor",
+    "license": "Released under the MIT License."
+  },
+  "platform": {
+    "mac-arm": "macOS (Apple Silicon)",
+    "mac-intel": "macOS (Intel)",
+    "win-x64": "Windows (x64)",
+    "win-arm": "Windows (ARM)",
+    "unknown": "your platform"
+  }
+}

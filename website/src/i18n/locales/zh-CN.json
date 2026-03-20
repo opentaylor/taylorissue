@@ -1,0 +1,87 @@
+{
+  "nav": {
+    "features": "功能特性",
+    "download": "下载",
+    "changelog": "更新日志"
+  },
+  "hero": {
+    "title": "一修哥",
+    "subtitle": "全球唯一一款龙虾维修软件",
+    "subtitleLine2": "一修在手，龙虾无忧",
+    "description": "不懂技术也能装，不花一分钱也能修。装、用、修、卸，一修哥帮你一步到位。",
+    "downloadFor": "下载 {{platform}} 版本",
+    "download": "下载",
+    "loading": "加载中...",
+    "viewOnGitHub": "在 GitHub 上查看"
+  },
+  "features": {
+    "title": "核心功能",
+    "subtitle": "安装、使用、修复和管理 OpenClaw 所需的一切——无需终端操作。",
+    "install": {
+      "title": "一键安装",
+      "description": "AI 引导自动检测环境，为你安装 Git、Node.js 和 OpenClaw。"
+    },
+    "repair": {
+      "title": "一键修复",
+      "description": "系统扫描、自动诊断并修复常见问题，还支持自定义问题的 AI 诊断。"
+    },
+    "uninstall": {
+      "title": "一键卸载",
+      "description": "精细化清理服务、包、工作区、配置和数据。"
+    },
+    "chat": {
+      "title": "智能体对话",
+      "description": "直接在应用中与你的 OpenClaw 智能体对话，选择可用的智能体即可开始。"
+    },
+    "skills": {
+      "title": "技能管理",
+      "description": "浏览、安装和管理来自本地和 ClawHub 社区市场的智能体技能。"
+    },
+    "model": {
+      "title": "模型配置",
+      "description": "秒级设置 LLM 提供商，内置免费 API 提供商指南。"
+    }
+  },
+  "download": {
+    "title": "下载",
+    "subtitle": "获取适合你平台的 TaylorIssue {{version}}。",
+    "loading": "正在加载下载链接...",
+    "macOS": "macOS",
+    "windows": "Windows",
+    "noMac": "暂无 macOS 版本。",
+    "noWin": "暂无 Windows 版本。",
+    "viewAll": "查看所有版本和历史版本"
+  },
+  "changelog": {
+    "title": "更新日志",
+    "subtitle": "TaylorIssue 的最新动态。",
+    "newFeatures": "新功能",
+    "changes": "变更",
+    "viewFull": "在 GitHub 上查看完整发布历史",
+    "items": {
+      "install": "一键安装：AI 引导自动检测环境，为你安装 Git、Node.js 和 OpenClaw",
+      "repair": "一键修复：系统扫描、自动诊断并修复常见问题，支持自定义问题描述进行 AI 诊断",
+      "uninstall": "一键卸载：精细化清理服务、包、工作区、配置和数据",
+      "chat": "智能体对话：直接在应用中与你的 OpenClaw 智能体对话",
+      "skills": "技能管理：浏览、安装和管理来自本地和 ClawHub 社区市场的智能体技能",
+      "model": "模型配置：秒级设置 LLM 提供商，内置免费 API 提供商指南"
+    }
+  },
+  "footer": {
+    "description": "全球唯一一款龙虾维修软件。一修在手，龙虾无忧。",
+    "links": "链接",
+    "releases": "版本发布",
+    "reportIssue": "报告问题",
+    "acknowledgements": "致谢",
+    "maintainer": "维护者",
+    "sponsor": "赞助者",
+    "license": "基于 MIT 许可证发布。"
+  },
+  "platform": {
+    "mac-arm": "macOS (Apple Silicon)",
+    "mac-intel": "macOS (Intel)",
+    "win-x64": "Windows (x64)",
+    "win-arm": "Windows (ARM)",
+    "unknown": "当前平台"
+  }
+}

@@ -46,3 +46,8 @@ yarn.lock
 
 # Testing
 coverage
+
+# Website
+website/node_modules
+website/dist
+website/public/hero-frames

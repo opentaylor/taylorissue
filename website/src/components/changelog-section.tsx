@@ -13,7 +13,7 @@ interface ChangelogEntry {
   body: string;
 }
 
-const FALLBACK_V003_ITEM_KEYS = [
+const FALLBACK_V010_ITEM_KEYS = [
   "install",
   "repair",
   "uninstall",
@@ -136,15 +136,15 @@ export function ChangelogSection() {
     }
   }
 
-  if (!seenVersions.has("v0.0.3")) {
+  if (!seenVersions.has("v0.1.0")) {
     const fallbackBody = [
       `### ${t("changelog.newFeatures")}`,
       "",
-      ...FALLBACK_V003_ITEM_KEYS.map((k) => `- ${t(`changelog.items.${k}`)}`),
+      ...FALLBACK_V010_ITEM_KEYS.map((k) => `- ${t(`changelog.items.${k}`)}`),
     ].join("\n");
 
     entries.unshift({
-      version: "v0.0.3",
+      version: "v0.1.0",
       date: "2026-03-21",
       body: fallbackBody,
     });

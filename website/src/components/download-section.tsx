@@ -16,7 +16,7 @@ export function DownloadSection() {
   const { latestRelease, getAllDownloads, loading } = useReleases();
   const downloads = getAllDownloads();
 
-  const version = latestRelease?.name ?? "v0.0.3";
+  const version = latestRelease?.name ?? "v0.1.0";
 
   const macDownloads = downloads.filter((d) => d.platform.startsWith("mac"));
   const winDownloads = downloads.filter((d) => d.platform.startsWith("win"));

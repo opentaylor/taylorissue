@@ -74,33 +74,32 @@ jobs:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Remove existing release assets on re-run
+        shell: bash
         run: |
-          $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          $tag = "app-v$version"
-          $release = gh release view $tag --json assets --jq '.assets[].name' 2>$null
-          if ($LASTEXITCODE -eq 0 -and $release) {
-            foreach ($asset in $release) {
-              if ($asset -match 'arm64' -and '${{ matrix.platform }}' -eq 'windows-11-arm') {
-                Write-Host "Deleting existing asset: $asset"
-                gh release delete-asset $tag $asset --yes
-              }
-              elseif ($asset -match 'x64' -and '${{ matrix.platform }}' -eq 'windows-latest') {
-                Write-Host "Deleting existing asset: $asset"
-                gh release delete-asset $tag $asset --yes
-              }
-              elseif ($asset -match 'aarch64-apple-darwin' -and '${{ matrix.args }}' -match 'aarch64-apple-darwin') {
-                Write-Host "Deleting existing asset: $asset"
-                gh release delete-asset $tag $asset --yes
-              }
-              elseif ($asset -match 'x86_64-apple-darwin' -and '${{ matrix.args }}' -match 'x86_64-apple-darwin') {
-                Write-Host "Deleting existing asset: $asset"
-                gh release delete-asset $tag $asset --yes
-              }
-            }
-          } else {
-            Write-Host "No existing release found for $tag, skipping cleanup"
-          }
-        shell: pwsh
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          tag="app-v${version}"
+          assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null || true)
+          if [ -z "$assets" ]; then
+            echo "No existing release found for $tag, skipping cleanup"
+            exit 0
+          fi
+          platform="${{ matrix.platform }}"
+          args="${{ matrix.args }}"
+          echo "$assets" | while read -r asset; do
+            delete=false
+            case "$platform" in
+              windows-11-arm) [[ "$asset" == *arm64* ]] && delete=true ;;
+              windows-latest) [[ "$asset" == *x64* ]] && delete=true ;;
+              macos-latest)
+                [[ "$args" == *aarch64-apple-darwin* && "$asset" == *aarch64* ]] && delete=true
+                [[ "$args" == *x86_64-apple-darwin* && "$asset" == *x64* ]] && delete=true
+                ;;
+            esac
+            if [ "$delete" = true ]; then
+              echo "Deleting existing asset: $asset"
+              gh release delete-asset "$tag" "$asset" --yes
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

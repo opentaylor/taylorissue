@@ -36,8 +36,6 @@ Thumbs.db
 # Tauri
 src-tauri/target/
 src-tauri/gen/schemas
-src-tauri/query
-src-tauri/.clawhub/
 
 # Lock files (project uses npm)
 pnpm-lock.yaml

@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::kernel::agent::{Agent, Session};
+use crate::kernel::agent::Session;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum JobStatus {

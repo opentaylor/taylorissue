@@ -1,9 +1,7 @@
 use async_trait::async_trait;
-use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::kernel::agent::Agent;
 use crate::kernel::util::store::JsonlFile;
 use super::base::Middleware;
 

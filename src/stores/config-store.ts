@@ -42,6 +42,10 @@ export const useConfigStore = create<ConfigState>()(
     }),
     {
       name: "taylor-config",
+      // Ensure persisted state can be safely rehydrated even after breaking changes.
+      // Without `migrate`, Zustand will emit a console error when it detects a version mismatch.
+      version: 1,
+      migrate: (persistedState) => persistedState as any,
       partialize: (state) => ({
         language: state.language,
         modelConfig: state.modelConfig,

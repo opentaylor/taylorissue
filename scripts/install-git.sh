@@ -78,12 +78,20 @@ ensure_git() {
     if [[ "$OSTYPE" == darwin* ]]; then
         brew install git
     else
+        if [[ "$(id -u)" -eq 0 ]]; then
+            local SUDO=""
+        elif sudo -n true 2>/dev/null; then
+            local SUDO="sudo -n"
+        else
+            die "Root or passwordless sudo required to install git on Linux"
+        fi
         if command -v apt-get >/dev/null 2>&1; then
-            sudo apt-get update -qq && sudo apt-get install -y -qq git
+            export DEBIAN_FRONTEND=noninteractive
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq git
         elif command -v dnf >/dev/null 2>&1; then
-            sudo dnf install -y -q git
+            $SUDO dnf install -y -q git
         elif command -v yum >/dev/null 2>&1; then
-            sudo yum install -y -q git
+            $SUDO yum install -y -q git
         else
             die "Cannot install git — no known package manager"
         fi
@@ -95,6 +103,8 @@ ensure_git() {
 
 main() {
     echo -e "${BOLD}  Install Git${NC}"
+    export NONINTERACTIVE=1
+    export HOMEBREW_NO_INSTALL_CLEANUP=1
     detect_cn
     apply_cn_brew
     ensure_brew

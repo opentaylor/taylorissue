@@ -29,9 +29,9 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(|_app| {
             #[cfg(target_os = "windows")]
-            disable_webview2_overscroll(app);
+            disable_webview2_overscroll(_app);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

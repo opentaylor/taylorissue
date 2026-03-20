@@ -1,18 +1,18 @@
 use async_trait::async_trait;
-use crate::kernel::agent::{Agent, Session};
+use crate::kernel::agent::Agent;
 
 #[async_trait]
 pub trait Middleware: Send + Sync {
-    async fn wrap_start(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn wrap_start(&self, _agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
-    async fn wrap_llm(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn wrap_llm(&self, _agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
-    async fn wrap_tool(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn wrap_tool(&self, _agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
-    async fn wrap_end(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn wrap_end(&self, _agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 }

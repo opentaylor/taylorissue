@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use serde_json::Value;
-use std::collections::HashMap;
 
 #[async_trait]
 pub trait BaseTool: Send + Sync {

@@ -85,12 +85,20 @@ ensure_node() {
         [[ -n "$prefix" && -d "$prefix/bin" ]] && export PATH="${prefix}/bin:$PATH"
     else
         info "Installing Node.js v${need} via NodeSource"
+        if [[ "$(id -u)" -eq 0 ]]; then
+            local SUDO=""
+        elif sudo -n true 2>/dev/null; then
+            local SUDO="sudo -n"
+        else
+            die "Root or passwordless sudo required to install Node.js on Linux"
+        fi
+        export DEBIAN_FRONTEND=noninteractive
         local tmp; tmp="$(mktemp)"
         curl -fsSL "https://deb.nodesource.com/setup_${need}.x" -o "$tmp"
         if [[ "$(id -u)" -eq 0 ]]; then
             bash "$tmp" && apt-get install -y -qq nodejs
         else
-            sudo -E bash "$tmp" && sudo apt-get install -y -qq nodejs
+            $SUDO -E bash "$tmp" && $SUDO apt-get install -y -qq nodejs
         fi
         rm -f "$tmp"
     fi
@@ -107,6 +115,8 @@ ensure_npm_ok() {
 
 main() {
     echo -e "${BOLD}  Install Node.js${NC}"
+    export NONINTERACTIVE=1
+    export HOMEBREW_NO_INSTALL_CLEANUP=1
     detect_cn
     apply_cn_brew
     ensure_brew

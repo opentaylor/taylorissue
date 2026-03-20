@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde_json::Value;
 use std::path::PathBuf;
+use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::Command;
 
@@ -65,6 +66,10 @@ impl BaseTool for BashTool {
                 "command": {
                     "type": "string",
                     "description": cmd_desc,
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Max seconds to wait before killing the command (default 120)",
                 }
             },
             "required": ["command"]
@@ -77,6 +82,12 @@ impl BaseTool for BashTool {
             .and_then(|v| v.as_str())
             .ok_or("Missing 'command' argument")?;
 
+        let timeout = args
+            .get("timeout")
+            .and_then(|v| v.as_u64())
+            .map(Duration::from_secs)
+            .unwrap_or(self.timeout);
+
         let mut cmd = {
             #[cfg(windows)]
             {
@@ -87,6 +98,7 @@ impl BaseTool for BashTool {
                 );
                 let mut c = Command::new("powershell.exe");
                 c.args(["-NoProfile", "-NonInteractive", "-Command", &wrapped]);
+                c.stdin(Stdio::null());
                 c.creation_flags(CREATE_NO_WINDOW);
                 c
             }
@@ -94,6 +106,7 @@ impl BaseTool for BashTool {
             {
                 let mut c = Command::new("sh");
                 c.arg("-c").arg(command);
+                c.stdin(Stdio::null());
                 c
             }
         };
@@ -103,7 +116,7 @@ impl BaseTool for BashTool {
             cmd.current_dir(workdir);
         }
 
-        let output = tokio::time::timeout(self.timeout, cmd.output()).await;
+        let output = tokio::time::timeout(timeout, cmd.output()).await;
 
         match output {
             Ok(Ok(output)) => {
@@ -129,7 +142,7 @@ impl BaseTool for BashTool {
             Ok(Err(e)) => Err(Box::new(e)),
             Err(_) => Ok(format!(
                 "Command timed out after {} seconds",
-                self.timeout.as_secs()
+                timeout.as_secs()
             )),
         }
     }
@@ -224,5 +237,20 @@ mod tests {
         assert_eq!(tool.name(), "bash");
         let schema = tool.params_schema();
         assert!(schema["properties"]["command"].is_object());
+        assert!(schema["properties"]["timeout"].is_object());
+    }
+
+    #[tokio::test]
+    async fn test_timeout_param_override() {
+        let tool = BashTool::new();
+        #[cfg(windows)]
+        let cmd = "Start-Sleep -Seconds 10";
+        #[cfg(not(windows))]
+        let cmd = "sleep 10";
+        let result = tool
+            .run(serde_json::json!({"command": cmd, "timeout": 1}))
+            .await
+            .unwrap();
+        assert!(result.contains("timed out"));
     }
 }

@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use serde_json::Value;
-use std::collections::HashMap;
 
-use crate::kernel::agent::{Agent, Suspension, Suspensions};
 use super::base::Middleware;
 
 pub struct PermissionMiddleware {

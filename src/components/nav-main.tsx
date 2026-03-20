@@ -62,12 +62,15 @@ function CollapsibleMenuItem({
   return (
     <Collapsible defaultOpen={isChildActive} className="group/collapsible">
       <SidebarMenuItem>
-        <CollapsibleTrigger className="w-full">
-          <SidebarMenuButton isActive={isChildActive}>
-            {item.icon}
-            <span>{item.title}</span>
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
+        <CollapsibleTrigger
+          className="w-full"
+          render={
+            <SidebarMenuButton isActive={isChildActive} type="button">
+              {item.icon}
+              <span>{item.title}</span>
+            </SidebarMenuButton>
+          }
+        />
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.items?.map((sub) => (

@@ -11,6 +11,8 @@ i18n.use(initReactI18next).init({
   lng: "zh-CN",
   fallbackLng: "en-US",
   interpolation: { escapeValue: false },
+  // Avoid i18next's dev-only support notice in the console.
+  showSupportNotice: false,
 })
 
 export default i18n

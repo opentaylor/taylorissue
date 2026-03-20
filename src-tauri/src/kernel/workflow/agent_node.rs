@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde_json::Value;
 
-use crate::kernel::agent::{Agent, Session, Suspensions};
+use crate::kernel::agent::{Agent, Session};
 use super::workflow::Node;
 
 pub struct AgentNode {

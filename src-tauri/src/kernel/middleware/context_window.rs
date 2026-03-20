@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use serde_json::Value;
 
-use crate::kernel::agent::Agent;
-use crate::kernel::llm::token_counter::TiktokenCounter;
 use super::base::Middleware;
 
 pub struct ContextWindowMiddleware {

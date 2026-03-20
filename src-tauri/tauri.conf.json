@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "一修哥",
+  "productName": "taylorissue",
   "version": "0.0.2",
   "identifier": "com.taylorissue.dev",
   "build": {

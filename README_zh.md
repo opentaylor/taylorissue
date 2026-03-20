@@ -7,10 +7,10 @@
 全球唯一一款 OpenClaw 维修软件，管理智能体的智能体。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.1-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-0.0.3-orange.svg)]()
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8D8.svg?logo=tauri)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)](https://react.dev/)
-[![Release](https://img.shields.io/badge/release-2026%E5%B9%B43%E6%9C%8819%E6%97%A5-green.svg)]()
+[![Release](https://img.shields.io/badge/release-2026%E5%B9%B43%E6%9C%8820%E6%97%A5-green.svg)]()
 
 [[English README](README.md)]
 
@@ -21,7 +21,7 @@
 
 ## 动态
 
-[2026-03-19] 发布 v0.0.1 版本。这是一修哥的首个版本，支持一键安装、一键修理、一键卸载、智能体对话和技能管理。
+[2026-03-20] 发布 v0.0.3 版本，支持 macOS 和 Windows。
 
 ## 什么是一修哥
 

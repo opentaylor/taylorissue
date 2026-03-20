@@ -7,10 +7,10 @@
 The world's only OpenClaw repair software. An agent that manages agents.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.1-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-0.0.3-orange.svg)]()
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8D8.svg?logo=tauri)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)](https://react.dev/)
-[![Release](https://img.shields.io/badge/release-March%2019%202026-green.svg)]()
+[![Release](https://img.shields.io/badge/release-March%2020%202026-green.svg)]()
 
 [[中文 README](README_zh.md)]
 
@@ -21,7 +21,7 @@ The world's only OpenClaw repair software. An agent that manages agents.
 
 ## News
 
-[2026-03-19] We released v0.0.1. This is the initial release of TaylorIssue, featuring one-click install, one-click repair, one-click uninstall, agent chat, and skill management for OpenClaw.
+[2026-03-20] We released v0.0.3 with support for macOS and Windows.
 
 ## What is TaylorIssue
 

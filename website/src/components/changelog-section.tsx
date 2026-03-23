@@ -1,7 +1,9 @@
+import { useState } from "react";
 import Markdown from "react-markdown";
+import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { useReleases } from "@/hooks/use-releases";
 import type { GitHubRelease } from "@/types/github";
 
@@ -124,6 +126,7 @@ function ChangelogEntryCard({ entry }: { entry: ChangelogEntry }) {
 export function ChangelogSection() {
   const { t } = useTranslation();
   const { releases } = useReleases();
+  const [visibleCount, setVisibleCount] = useState(2);
 
   const entries: ChangelogEntry[] = [];
   const seenVersions = new Set<string>();
@@ -150,8 +153,11 @@ export function ChangelogSection() {
     });
   }
 
+  const visibleEntries = entries.slice(0, visibleCount);
+  const hasMore = visibleCount < entries.length;
+
   return (
-    <section id="changelog" className="scroll-mt-16 py-20 sm:py-28">
+    <section id="changelog" className="scroll-mt-16 bg-muted/40 py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -162,14 +168,24 @@ export function ChangelogSection() {
           </p>
         </div>
 
-        <Separator className="my-10" />
-
-        <div className="pl-2">
-          {entries.map((entry) => (
+        <div className="mt-12 pl-2">
+          {visibleEntries.map((entry) => (
             <ChangelogEntryCard key={entry.version} entry={entry} />
           ))}
         </div>
 
+        {hasMore && (
+          <div className="mt-4 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setVisibleCount((c) => c + 2)}
+            >
+              <ChevronDown className="size-4" />
+              {t("changelog.more")}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

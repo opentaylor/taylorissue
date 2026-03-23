@@ -50,7 +50,8 @@
     "windows": "Windows",
     "noMac": "No macOS builds available yet.",
     "noWin": "No Windows builds available yet.",
-    "viewAll": "View all releases & older versions"
+    "viewAll": "View all releases & older versions",
+    "more": "Show more"
   },
   "changelog": {
     "title": "Changelog",
@@ -58,6 +59,7 @@
     "newFeatures": "New Features",
     "changes": "Changes",
     "viewFull": "View full release history on GitHub",
+    "more": "Show more",
     "items": {
       "install": "One-click install with AI-guided flow that auto-detects your environment and installs Git, Node.js, and OpenClaw for you",
       "repair": "One-click repair with system scan, automatic diagnostics, and fixes for common issues, plus custom issue descriptions for AI-powered diagnosis",
@@ -78,10 +80,16 @@
     "license": "Released under the MIT License."
   },
   "platform": {
-    "mac-arm": "macOS (Apple Silicon)",
+    "mac-arm": "macOS (Apple)",
     "mac-intel": "macOS (Intel)",
     "win-x64": "Windows (x64)",
     "win-arm": "Windows (ARM)",
     "unknown": "your platform"
+  },
+  "arch": {
+    "mac-arm": "Apple",
+    "mac-intel": "Intel",
+    "win-x64": "x64",
+    "win-arm": "ARM"
   }
 }

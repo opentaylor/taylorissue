@@ -50,7 +50,8 @@
     "windows": "Windows",
     "noMac": "暂无 macOS 版本。",
     "noWin": "暂无 Windows 版本。",
-    "viewAll": "查看所有版本和历史版本"
+    "viewAll": "查看所有版本和历史版本",
+    "more": "显示更多"
   },
   "changelog": {
     "title": "更新日志",
@@ -58,6 +59,7 @@
     "newFeatures": "新功能",
     "changes": "变更",
     "viewFull": "在 GitHub 上查看完整发布历史",
+    "more": "显示更多",
     "items": {
       "install": "一键安装：AI 引导自动检测环境，为你安装 Git、Node.js 和 OpenClaw",
       "repair": "一键修复：系统扫描、自动诊断并修复常见问题，支持自定义问题描述进行 AI 诊断",
@@ -78,10 +80,16 @@
     "license": "基于 MIT 许可证发布。"
   },
   "platform": {
-    "mac-arm": "macOS (Apple Silicon)",
+    "mac-arm": "macOS (Apple)",
     "mac-intel": "macOS (Intel)",
     "win-x64": "Windows (x64)",
     "win-arm": "Windows (ARM)",
     "unknown": "当前平台"
+  },
+  "arch": {
+    "mac-arm": "Apple",
+    "mac-intel": "Intel",
+    "win-x64": "x64",
+    "win-arm": "ARM"
   }
 }

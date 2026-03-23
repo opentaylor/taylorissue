@@ -13,7 +13,7 @@ const ASSET_PATTERNS: Record<Platform, RegExp> = {
 };
 
 const PLATFORM_LABELS: Record<Platform, string> = {
-  "mac-arm": "macOS (Apple Silicon)",
+  "mac-arm": "macOS (Apple)",
   "mac-intel": "macOS (Intel)",
   "win-x64": "Windows (x64)",
   "win-arm": "Windows (ARM)",
@@ -78,10 +78,20 @@ export function useReleases() {
 
   function getAllDownloads(): DownloadAsset[] {
     if (!latestRelease) return [];
+    return getDownloadsForRelease(latestRelease);
+  }
+
+  function getDownloadsForRelease(release: GitHubRelease): DownloadAsset[] {
     const platforms: Platform[] = ["mac-arm", "mac-intel", "win-x64", "win-arm"];
     return platforms
-      .map((p) => findAssetForPlatform(latestRelease, p))
+      .map((p) => findAssetForPlatform(release, p))
       .filter((a): a is DownloadAsset => a !== null);
+  }
+
+  function getAllPlatformDownloads(): (DownloadAsset | null)[] {
+    const platforms: Platform[] = ["mac-arm", "mac-intel", "win-x64", "win-arm"];
+    if (!latestRelease) return platforms.map(() => null);
+    return platforms.map((p) => findAssetForPlatform(latestRelease, p));
   }
 
   return {
@@ -91,5 +101,7 @@ export function useReleases() {
     error,
     getDownloadUrl,
     getAllDownloads,
+    getDownloadsForRelease,
+    getAllPlatformDownloads,
   };
 }

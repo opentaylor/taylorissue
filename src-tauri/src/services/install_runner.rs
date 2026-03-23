@@ -9,6 +9,7 @@ use crate::kernel::llm::openai::OpenAiLlm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::prompts::render;
+use crate::services::shell_env;
 use crate::services::step_runner::{run_step, run_step_dynamic, StepDef};
 
 pub const SYSTEM_PROMPT: &str = include_str!("../prompts/install/system.md");
@@ -231,6 +232,8 @@ pub async fn run_install(
         "{\"success\": true, \"version\": \"<openclaw version>\"}",
     );
     step!("installOpenClaw", openclaw_prompt);
+
+    shell_env::refresh_path();
 
     step!("configure", build_configure_prompt(&config));
     step!("startGateway", build_start_gateway_prompt(&config));

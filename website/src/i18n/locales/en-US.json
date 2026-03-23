@@ -77,6 +77,8 @@
     "acknowledgements": "Acknowledgements",
     "maintainer": "Maintainer",
     "sponsor": "Sponsor",
+    "maintainerZhang": "Zhang Zhi",
+    "sponsorChen": "Chen Gong",
     "license": "Released under the MIT License."
   },
   "platform": {

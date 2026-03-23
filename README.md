@@ -128,7 +128,6 @@ To build for production, run `pnpm build && pnpm tauri build`.
 Maintainers
 
 - Zhang Zhi, PhD Student, Department of Computing, The Hong Kong Polytechnic University
-- Liu Yan, Professor, Department of Computing, The Hong Kong Polytechnic University
 
 Sponsors
 

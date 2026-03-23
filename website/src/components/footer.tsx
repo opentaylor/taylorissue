@@ -69,13 +69,10 @@ export function Footer() {
             </h4>
             <ul className="mt-3 space-y-2 text-base text-muted-foreground">
               <li>
-                Zhang Zhi &mdash; {t("footer.maintainer")}
+                {t("footer.maintainerZhang")} &mdash; {t("footer.maintainer")}
               </li>
               <li>
-                Liu Yan &mdash; {t("footer.maintainer")}
-              </li>
-              <li>
-                Chen Gong &mdash; {t("footer.sponsor")}
+                {t("footer.sponsorChen")} &mdash; {t("footer.sponsor")}
               </li>
             </ul>
           </div>

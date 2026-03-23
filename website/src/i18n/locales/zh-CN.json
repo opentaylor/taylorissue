@@ -77,6 +77,8 @@
     "acknowledgements": "致谢",
     "maintainer": "维护者",
     "sponsor": "赞助者",
+    "maintainerZhang": "张智",
+    "sponsorChen": "陈功",
     "license": "基于 MIT 许可证发布。"
   },
   "platform": {

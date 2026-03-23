@@ -31,13 +31,16 @@ async fn ensure_http_endpoint(config: &AppConfig) {
         log::warn!("[ensure_http_endpoint] failed to enable endpoint in config");
         return;
     }
-    let bin = &config.openclaw_bin;
-    let bin = if bin.is_empty() { "openclaw" } else { bin.as_str() };
+    let bin = if config.openclaw_bin.is_empty() {
+        setup_detection::detect_openclaw_bin()
+            .unwrap_or_else(|| "openclaw".to_string())
+    } else {
+        config.openclaw_bin.clone()
+    };
     log::info!("[ensure_http_endpoint] restarting gateway via {}", bin);
     let result = tokio::task::spawn_blocking({
-        let bin = bin.to_string();
         move || {
-            let mut cmd = std::process::Command::new(&bin);
+            let mut cmd = shell_env::build_command(&bin);
             cmd.args(["gateway", "restart"]);
             shell_env::apply_env(&mut cmd);
             cmd.output()

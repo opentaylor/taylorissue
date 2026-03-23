@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 use serde_json::Value;
 
+use crate::services::shell_env;
+
 fn openclaw_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_default().join(".openclaw")
 }
@@ -28,9 +30,27 @@ pub fn detect_workspace_path() -> Option<String> {
 }
 
 pub fn detect_openclaw_bin() -> Option<String> {
-    which::which("openclaw")
-        .ok()
-        .map(|p| p.to_string_lossy().to_string())
+    let enriched = shell_env::full_path();
+    if let Ok(p) = which::which_in("openclaw", Some(&enriched), ".") {
+        return Some(p.to_string_lossy().to_string());
+    }
+
+    if let Ok(p) = which::which("openclaw") {
+        return Some(p.to_string_lossy().to_string());
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(local) = std::env::var("LOCALAPPDATA") {
+            let cmd_path = PathBuf::from(&local)
+                .join(r"taylorissue\app\node_modules\.bin\openclaw.cmd");
+            if cmd_path.is_file() {
+                return Some(cmd_path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    None
 }
 
 pub fn detect_gateway_token() -> Option<String> {

@@ -79,7 +79,6 @@ export default function DashboardHome() {
 
   const maintainers = [
     t("page.dashboard.meta.maintainers.items.zhang"),
-    t("page.dashboard.meta.maintainers.items.liu"),
   ]
   const acknowledgements = [t("page.dashboard.meta.acknowledgements.items.chen")]
 

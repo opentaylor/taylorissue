@@ -1,7 +1,7 @@
 use std::process::Command;
-use std::sync::OnceLock;
+use std::sync::RwLock;
 
-static RESOLVED_PATH: OnceLock<String> = OnceLock::new();
+static RESOLVED_PATH: RwLock<Option<String>> = RwLock::new(None);
 
 #[cfg(windows)]
 fn path_sep() -> char {
@@ -20,28 +20,52 @@ fn path_entry_count(path: &str) -> usize {
         .count()
 }
 
-pub fn full_path() -> &'static str {
-    RESOLVED_PATH.get_or_init(|| {
-        let base = match path_from_login_shell() {
-            Some(p) => {
-                log::info!(
-                    "[shell_env] resolved PATH from login shell ({} entries)",
-                    path_entry_count(&p)
-                );
-                p
-            }
-            None => {
-                log::info!("[shell_env] login shell resolution failed, using process PATH");
-                std::env::var("PATH").unwrap_or_default()
-            }
-        };
-        let merged = merge_extra_paths(&base);
-        log::info!(
-            "[shell_env] final PATH ({} entries)",
-            path_entry_count(&merged)
-        );
-        merged
-    })
+fn resolve_path() -> String {
+    let base = match path_from_login_shell() {
+        Some(p) => {
+            log::info!(
+                "[shell_env] resolved PATH from login shell ({} entries)",
+                path_entry_count(&p)
+            );
+            p
+        }
+        None => {
+            log::info!("[shell_env] login shell resolution failed, using process PATH");
+            std::env::var("PATH").unwrap_or_default()
+        }
+    };
+    let merged = merge_extra_paths(&base);
+    log::info!(
+        "[shell_env] final PATH ({} entries)",
+        path_entry_count(&merged)
+    );
+    merged
+}
+
+pub fn full_path() -> String {
+    {
+        let guard = RESOLVED_PATH.read().unwrap();
+        if let Some(ref path) = *guard {
+            return path.clone();
+        }
+    }
+    let mut guard = RESOLVED_PATH.write().unwrap();
+    if let Some(ref path) = *guard {
+        return path.clone();
+    }
+    let path = resolve_path();
+    *guard = Some(path.clone());
+    path
+}
+
+pub fn refresh_path() {
+    let path = resolve_path();
+    log::info!(
+        "[shell_env] PATH refreshed ({} entries)",
+        path_entry_count(&path)
+    );
+    let mut guard = RESOLVED_PATH.write().unwrap();
+    *guard = Some(path);
 }
 
 #[cfg(not(windows))]
@@ -108,8 +132,11 @@ fn merge_extra_paths(base: &str) -> String {
         .to_string_lossy()
         .to_string();
 
-    let extra_dirs = [
+    let priority_dirs = [
         format!("{}/.taylorissue/app/node_modules/.bin", home),
+    ];
+
+    let extra_dirs = [
         "/usr/local/bin".to_string(),
         "/opt/homebrew/bin".to_string(),
         "/opt/homebrew/sbin".to_string(),
@@ -120,7 +147,20 @@ fn merge_extra_paths(base: &str) -> String {
         format!("{}/.nvm/versions/node", home),
     ];
 
-    let mut parts: Vec<String> = base.split(':').map(String::from).collect();
+    let mut parts: Vec<String> = Vec::new();
+
+    for dir in &priority_dirs {
+        if std::path::Path::new(dir).is_dir() {
+            parts.push(dir.clone());
+        }
+    }
+
+    for entry in base.split(':') {
+        let entry = entry.to_string();
+        if !entry.is_empty() && !parts.iter().any(|p| p == &entry) {
+            parts.push(entry);
+        }
+    }
 
     if let Ok(nvm_dir) = glob_latest_nvm_bin(&home) {
         if !parts.contains(&nvm_dir) {
@@ -151,11 +191,14 @@ fn merge_extra_paths(base: &str) -> String {
     let program_files_x86 = std::env::var("ProgramFiles(x86)")
         .unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
 
-    let extra_dirs = vec![
+    let priority_dirs = vec![
         format!(r"{local_app_data}\taylorissue\app\node_modules\.bin"),
         format!(r"{local_app_data}\taylorissue\deps\portable-git\cmd"),
         format!(r"{local_app_data}\taylorissue\deps\portable-git\mingw64\bin"),
         format!(r"{local_app_data}\taylorissue\deps\nodejs"),
+    ];
+
+    let extra_dirs = vec![
         format!(r"{}\.cargo\bin", home),
         format!(r"{program_files}\Git\bin"),
         format!(r"{program_files}\Git\cmd"),
@@ -166,11 +209,20 @@ fn merge_extra_paths(base: &str) -> String {
         format!(r"{local_app_data}\Programs"),
     ];
 
-    let mut parts: Vec<String> = base
-        .split(';')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
+    let mut parts: Vec<String> = Vec::new();
+
+    for dir in &priority_dirs {
+        if !dir.is_empty() && std::path::Path::new(dir).is_dir() {
+            parts.push(dir.clone());
+        }
+    }
+
+    for entry in base.split(';') {
+        let entry = entry.trim().to_string();
+        if !entry.is_empty() && !parts.iter().any(|p| p == &entry) {
+            parts.push(entry);
+        }
+    }
 
     for dir in extra_dirs {
         if dir.is_empty() {
@@ -201,6 +253,19 @@ fn glob_latest_nvm_bin(home: &str) -> Result<String, ()> {
         .first()
         .map(|v| v.path().join("bin").to_string_lossy().to_string())
         .ok_or(())
+}
+
+pub fn build_command(bin: &str) -> Command {
+    #[cfg(windows)]
+    {
+        let lower = bin.to_lowercase();
+        if lower.ends_with(".cmd") || lower.ends_with(".bat") {
+            let mut cmd = Command::new("cmd.exe");
+            cmd.args(["/c", bin]);
+            return cmd;
+        }
+    }
+    Command::new(bin)
 }
 
 pub fn apply_env(cmd: &mut Command) -> &mut Command {

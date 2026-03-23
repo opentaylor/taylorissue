@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::Command;
 use thiserror::Error;
 
 use crate::config::AppConfig;
@@ -63,19 +62,17 @@ fn workspace_skills_dir() -> PathBuf {
 
 fn run_cli(args: &[&str], openclaw_bin: &str) -> Value {
     let bin = if openclaw_bin.is_empty() {
-        which::which("openclaw")
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "openclaw".to_string())
+        crate::services::setup_detection::detect_openclaw_bin()
+            .unwrap_or_else(|| "openclaw".to_string())
     } else {
         openclaw_bin.to_string()
     };
 
-    let mut cmd_args = vec![bin.as_str()];
-    cmd_args.extend_from_slice(args);
-    cmd_args.push("--json");
+    let mut cli_args: Vec<&str> = args.to_vec();
+    cli_args.push("--json");
 
-    let mut cmd = Command::new(&cmd_args[0]);
-    cmd.args(&cmd_args[1..]);
+    let mut cmd = shell_env::build_command(&bin);
+    cmd.args(&cli_args);
     shell_env::apply_env(&mut cmd);
     let result = cmd.output();
 
@@ -89,6 +86,7 @@ fn run_cli(args: &[&str], openclaw_bin: &str) -> Value {
 }
 
 pub async fn list_skills(openclaw_bin: &str) -> Result<Vec<SkillInfo>, SkillError> {
+    shell_env::refresh_path();
     let bin = openclaw_bin.to_string();
     let list_handle = tokio::task::spawn_blocking({
         let bin = bin.clone();

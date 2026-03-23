@@ -51,7 +51,13 @@
   "pnpm": {
     "overrides": {
       "react-is": "^19.2.4"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@tailwindcss/oxide",
+      "lightningcss",
+      "msw"
+    ]
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

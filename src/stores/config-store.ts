@@ -19,7 +19,7 @@ export const useConfigStore = create<ConfigState>()(
       modelConfig: {
         baseUrl: "https://aihubmix.com/v1",
         apiKey: "",
-        model: "gpt-4.1-nano",
+        model: "gpt-4.1",
       },
       openclawDir: "~/.openclaw",
 

@@ -157,7 +157,7 @@ export function ChangelogSection() {
   const hasMore = visibleCount < entries.length;
 
   return (
-    <section id="changelog" className="scroll-mt-16 bg-muted/40 py-20 sm:py-28">
+    <section id="changelog" className="scroll-mt-16 bg-muted/40 py-12 sm:py-16">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -168,7 +168,7 @@ export function ChangelogSection() {
           </p>
         </div>
 
-        <div className="mt-12 pl-2">
+        <div className="mt-8 pl-2">
           {visibleEntries.map((entry) => (
             <ChangelogEntryCard key={entry.version} entry={entry} />
           ))}

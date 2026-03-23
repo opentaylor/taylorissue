@@ -108,7 +108,7 @@ export function DownloadSection() {
   return (
     <section
       id="download"
-      className="scroll-mt-16 py-20 sm:py-28"
+      className="scroll-mt-16 py-12 sm:py-16"
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
@@ -123,11 +123,11 @@ export function DownloadSection() {
         </div>
 
         {loading ? (
-          <div className="mt-12 text-center text-base text-muted-foreground">
+          <div className="mt-8 text-center text-base text-muted-foreground">
             {t("download.loading")}
           </div>
         ) : (
-          <div className="mt-12 flex flex-col gap-6">
+          <div className="mt-8 flex flex-col gap-6">
             {visibleReleases.map((release) => (
               <ReleaseCard
                 key={release.tag_name}

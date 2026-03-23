@@ -17,7 +17,7 @@ export function HeroSection() {
   const platformDownloads = getAllPlatformDownloads();
 
   return (
-    <section className="relative overflow-hidden pt-16 pb-16 sm:pt-24 sm:pb-24">
+    <section className="relative overflow-hidden pt-10 pb-12 sm:pt-14 sm:pb-16">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,var(--color-primary)/0.08,transparent)]" />
 
       <div className="mx-auto flex max-w-4xl flex-col items-center px-4 text-center sm:px-6">
@@ -28,7 +28,7 @@ export function HeroSection() {
           loading="eager"
         />
 
-        <h1 className="mt-8 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
           {t("hero.title")}
         </h1>
 
@@ -41,7 +41,7 @@ export function HeroSection() {
           {t("hero.description")}
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           {ALL_PLATFORMS.map((p, i) => {
             const asset = platformDownloads[i];
             const isDetected = p === detectedPlatform;
@@ -78,7 +78,7 @@ export function HeroSection() {
         </div>
       </div>
 
-      <div className="mx-auto mt-16 max-w-3xl px-4 sm:px-6">
+      <div className="mx-auto mt-8 max-w-3xl px-4 sm:px-6">
         <div className="overflow-hidden rounded-xl border shadow-2xl shadow-primary/5">
           <img
             src={overviewImg}

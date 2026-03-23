@@ -28,7 +28,7 @@ export function FeaturesSection() {
   const { t } = useTranslation();
 
   return (
-    <section id="features" className="scroll-mt-16 bg-muted/40 py-20 sm:py-28">
+    <section id="features" className="scroll-mt-16 bg-muted/40 py-12 sm:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -39,7 +39,7 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <Card
               key={f.key}

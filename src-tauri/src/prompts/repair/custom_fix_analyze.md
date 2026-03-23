@@ -1,4 +1,4 @@
-Analyse the user's problem. Gather system info with read-only commands.
+Analyse the user's problem. Gather system info with read-only commands only.
 
 User's problem:
 {problem}

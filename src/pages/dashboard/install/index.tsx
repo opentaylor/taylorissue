@@ -33,6 +33,7 @@ import {
   RocketIcon,
   GitBranchIcon,
   HexagonIcon,
+  PowerIcon,
 } from "lucide-react"
 import { useInstallStore } from "@/stores/workflows/install-store"
 import type { WorkflowStepStatus } from "@/types/workflow"
@@ -43,6 +44,7 @@ const STEP_KEYS = [
   "installNode",
   "installOpenClaw",
   "configure",
+  "startGateway",
   "verify",
 ] as const
 
@@ -54,6 +56,7 @@ const STEP_ICONS: Record<StepKey, typeof MonitorIcon> = {
   installNode: HexagonIcon,
   installOpenClaw: DownloadIcon,
   configure: SettingsIcon,
+  startGateway: PowerIcon,
   verify: ShieldCheckIcon,
 }
 

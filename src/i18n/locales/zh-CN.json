@@ -118,6 +118,11 @@
           "active": "正在运行初始化配置…",
           "complete": "配置完成"
         },
+        "startGateway": {
+          "label": "开启网关",
+          "active": "正在启动 OpenClaw 网关…",
+          "complete": "网关已启动"
+        },
         "verify": {
           "label": "验证网关",
           "active": "正在检查网关状态…",

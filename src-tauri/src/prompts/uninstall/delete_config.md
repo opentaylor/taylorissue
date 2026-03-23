@@ -2,12 +2,9 @@ Delete OpenClaw configuration files from ~/.openclaw.
 Target files: openclaw.json, openclaw.json.bak, packs.json, update-check.json
 
 On macOS/Linux:
-  ls ~/.openclaw/{openclaw.json,openclaw.json.bak,packs.json,update-check.json} 2>/dev/null
-  Delete any that exist with rm.
-
-On Windows (PowerShell):
-  $dir = "$env:USERPROFILE\.openclaw"
-  foreach ($f in @('openclaw.json','openclaw.json.bak','packs.json','update-check.json')) { if (Test-Path "$dir\$f") { Remove-Item "$dir\$f" -Force; echo "deleted $f" } }
+  cd ~/.openclaw 2>/dev/null && for f in openclaw.json openclaw.json.bak packs.json update-check.json; do [ -f "$f" ] && rm "$f" && echo "deleted $f"; done
+On Windows:
+  $dir = "$env:USERPROFILE\.openclaw"; foreach ($f in @('openclaw.json','openclaw.json.bak','packs.json','update-check.json')) { if (Test-Path "$dir\$f") { Remove-Item "$dir\$f" -Force; "deleted $f" } }
 
 Respond with ONLY this JSON:
 {"success": true, "files_deleted": ["<file1>", ...], "details": "<summary>"}

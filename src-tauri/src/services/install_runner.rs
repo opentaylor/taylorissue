@@ -20,6 +20,7 @@ pub static STEP_DETECT_ENV: StepDef = StepDef {
 
 pub const SCRIPT_TEMPLATE: &str = include_str!("../prompts/install/script.md");
 pub const CONFIGURE_TEMPLATE: &str = include_str!("../prompts/install/configure.md");
+pub const START_GATEWAY_TEMPLATE: &str = include_str!("../prompts/install/start_gateway.md");
 pub const VERIFY_TEMPLATE: &str = include_str!("../prompts/install/verify.md");
 
 pub fn build_script_prompt(script_path: &str, label: &str, verify_cmd: &str, json_tpl: &str) -> String {
@@ -36,6 +37,12 @@ pub fn build_configure_prompt(config: &AppConfig) -> String {
         ("base_url", &config.base_url),
         ("model", &config.model),
         ("api_key", &config.api_key),
+        ("port", &config.gateway_port.to_string()),
+    ])
+}
+
+pub fn build_start_gateway_prompt(config: &AppConfig) -> String {
+    render(START_GATEWAY_TEMPLATE, &[
         ("port", &config.gateway_port.to_string()),
     ])
 }
@@ -153,6 +160,9 @@ fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
             if let Some(v) = parsed.get("config_path").and_then(|v| v.as_str()) { details.push(v.to_string()); }
             if let Some(v) = parsed.get("details").and_then(|v| v.as_str()) { details.push(v.to_string()); }
         }
+        "startGateway" => {
+            if let Some(v) = parsed.get("port").and_then(|v| v.as_u64()) { details.push(format!("Port: {}", v)); }
+        }
         "verify" => {
             if let Some(v) = parsed.get("status").and_then(|v| v.as_str()) { details.push(v.to_string()); }
             if let Some(v) = parsed.get("port").and_then(|v| v.as_u64()) { details.push(format!("Port: {}", v)); }
@@ -223,6 +233,7 @@ pub async fn run_install(
     step!("installOpenClaw", openclaw_prompt);
 
     step!("configure", build_configure_prompt(&config));
+    step!("startGateway", build_start_gateway_prompt(&config));
     step!("verify", build_verify_prompt(&config));
 
     let _ = channel.send(serde_json::json!({"event": "done", "data": {}}));

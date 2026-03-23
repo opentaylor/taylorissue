@@ -1,13 +1,9 @@
-Delete all remaining data inside ~/.openclaw.
-This includes: credentials, agents, sessions, logs, secrets.
+Delete all remaining data inside ~/.openclaw (credentials, agents, sessions, logs, secrets).
 
 On macOS/Linux:
-  ls ~/.openclaw/ 2>/dev/null
-  If has contents: rm -rf ~/.openclaw
-
-On Windows (PowerShell):
-  $dir = "$env:USERPROFILE\.openclaw"
-  if (Test-Path $dir) { Get-ChildItem $dir; Remove-Item $dir -Recurse -Force; echo 'removed' } else { echo 'already absent' }
+  if [ -d ~/.openclaw ]; then ls ~/.openclaw/ && rm -rf ~/.openclaw && echo "removed"; else echo "already absent"; fi
+On Windows:
+  $dir = "$env:USERPROFILE\.openclaw"; if (Test-Path $dir) { Get-ChildItem $dir; Remove-Item $dir -Recurse -Force; "removed" } else { "already absent" }
 
 Respond with ONLY this JSON:
 {"success": true, "items_removed": ["<item1>", ...], "details": "<summary>"}

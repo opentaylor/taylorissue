@@ -53,6 +53,14 @@ fn managed_skills_dir() -> PathBuf {
         .join("skills")
 }
 
+fn workspace_skills_dir() -> PathBuf {
+    dirs::home_dir()
+        .unwrap_or_default()
+        .join(".openclaw")
+        .join("workspace")
+        .join("skills")
+}
+
 fn run_cli(args: &[&str], openclaw_bin: &str) -> Value {
     let bin = if openclaw_bin.is_empty() {
         which::which("openclaw")
@@ -318,10 +326,16 @@ pub async fn uninstall_skill(openclaw_bin: &str, name: &str) -> Result<(), Skill
     }
 
     let skill_dir = managed_skills_dir().join(name);
-    if !skill_dir.is_dir() {
+    let workspace_dir = workspace_skills_dir().join(name);
+    if !skill_dir.is_dir() && !workspace_dir.is_dir() {
         return Err(SkillError::NotFound(name.to_string()));
     }
-    std::fs::remove_dir_all(&skill_dir)?;
+    if skill_dir.is_dir() {
+        std::fs::remove_dir_all(&skill_dir)?;
+    }
+    if workspace_dir.is_dir() {
+        let _ = std::fs::remove_dir_all(&workspace_dir);
+    }
     Ok(())
 }
 

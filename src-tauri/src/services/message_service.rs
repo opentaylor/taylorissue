@@ -27,33 +27,35 @@ async fn ensure_http_endpoint(config: &AppConfig) {
         return;
     }
     log::info!("[ensure_http_endpoint] enabling chatCompletions HTTP endpoint");
-    if setup_detection::enable_http_endpoint() {
-        let bin = &config.openclaw_bin;
-        let bin = if bin.is_empty() { "openclaw" } else { bin.as_str() };
-        log::info!("[ensure_http_endpoint] restarting gateway via {}", bin);
-        let result = tokio::task::spawn_blocking({
-            let bin = bin.to_string();
-            move || {
-                let mut cmd = std::process::Command::new(&bin);
-                cmd.args(["gateway", "restart"]);
-                shell_env::apply_env(&mut cmd);
-                cmd.output()
-            }
-        })
-        .await;
-        match result {
-            Ok(Ok(output)) => {
-                log::info!(
-                    "[ensure_http_endpoint] gateway restart exit={}",
-                    output.status
-                );
-                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-            }
-            Ok(Err(e)) => log::warn!("[ensure_http_endpoint] failed to run restart: {}", e),
-            Err(e) => log::warn!("[ensure_http_endpoint] spawn error: {}", e),
-        }
+    if !setup_detection::enable_http_endpoint() {
+        log::warn!("[ensure_http_endpoint] failed to enable endpoint in config");
+        return;
     }
-    ENDPOINT_ENSURED.store(true, Ordering::Relaxed);
+    let bin = &config.openclaw_bin;
+    let bin = if bin.is_empty() { "openclaw" } else { bin.as_str() };
+    log::info!("[ensure_http_endpoint] restarting gateway via {}", bin);
+    let result = tokio::task::spawn_blocking({
+        let bin = bin.to_string();
+        move || {
+            let mut cmd = std::process::Command::new(&bin);
+            cmd.args(["gateway", "restart"]);
+            shell_env::apply_env(&mut cmd);
+            cmd.output()
+        }
+    })
+    .await;
+    match result {
+        Ok(Ok(output)) if output.status.success() => {
+            log::info!("[ensure_http_endpoint] gateway restart exit={}", output.status);
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            ENDPOINT_ENSURED.store(true, Ordering::Relaxed);
+        }
+        Ok(Ok(output)) => {
+            log::warn!("[ensure_http_endpoint] gateway restart failed exit={}", output.status);
+        }
+        Ok(Err(e)) => log::warn!("[ensure_http_endpoint] failed to run restart: {}", e),
+        Err(e) => log::warn!("[ensure_http_endpoint] spawn error: {}", e),
+    }
 }
 
 pub fn list_registered_agents(config: &AppConfig) -> Result<Vec<AgentEntry>, MessageError> {
@@ -116,7 +118,13 @@ async fn probe_gateway_error(
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        if !content.is_empty() {
+        let looks_like_error = content
+            .trim()
+            .chars()
+            .take(3)
+            .all(|c| c.is_ascii_digit())
+            && content.trim().len() >= 3;
+        if !content.is_empty() && looks_like_error {
             log::warn!("[stream_chat] probe detected gateway error: {}", content);
             return Some(content);
         }

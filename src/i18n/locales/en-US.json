@@ -118,6 +118,11 @@
           "active": "Running onboarding and writing config…",
           "complete": "Configuration complete"
         },
+        "startGateway": {
+          "label": "Start gateway",
+          "active": "Starting OpenClaw gateway…",
+          "complete": "Gateway started"
+        },
         "verify": {
           "label": "Verify gateway",
           "active": "Checking gateway status…",

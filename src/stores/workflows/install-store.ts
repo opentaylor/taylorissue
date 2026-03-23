@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { startInstall } from "@/services/api/install"
 import type { WorkflowStepStatus } from "@/types/workflow"
 
-type InstallStepKey = "detectEnv" | "installGit" | "installNode" | "installOpenClaw" | "configure" | "verify"
+type InstallStepKey = "detectEnv" | "installGit" | "installNode" | "installOpenClaw" | "configure" | "startGateway" | "verify"
 
 export interface InstallStep {
   id: InstallStepKey
@@ -22,6 +22,7 @@ const STEP_KEYS: InstallStepKey[] = [
   "installNode",
   "installOpenClaw",
   "configure",
+  "startGateway",
   "verify",
 ]
 

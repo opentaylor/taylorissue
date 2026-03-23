@@ -2,12 +2,16 @@ The diagnostic scan for step "{step_id}" found the following issue:
 
 {issue_description}
 
-Fix this issue now. You CAN and SHOULD run commands that modify system state.
-IMPORTANT: If you modify ~/.openclaw/openclaw.json, restart the gateway afterwards:
-On Windows: openclaw gateway stop; Start-Process powershell -ArgumentList '-NoExit','-Command','openclaw gateway'
-On macOS/Linux: openclaw gateway stop; nohup openclaw gateway &
-Do NOT use 'openclaw gateway restart' — it blocks.
+User configuration — use these values when writing or restoring config:
+  API Base URL: {base_url}
+  API Key: {api_key}
+  Model: {model}
+  Gateway Port: {port}
+
+Fix this issue now. NEVER overwrite ~/.openclaw/openclaw.json with a minimal stub.
+If the config is damaged beyond repair, regenerate it with:
+  openclaw onboard --non-interactive --mode local --auth-choice custom-api-key --custom-base-url "{base_url}" --custom-model-id "{model}" --custom-api-key "{api_key}" --custom-provider-id custom --custom-compatibility openai --accept-risk --gateway-port {port} --gateway-bind loopback --skip-skills --skip-channels
 
 Respond with ONLY this JSON:
-{"success": true, "details": "<what was done to fix it>"}
-On failure: {"success": false, "error": "<why the fix did not work>"}
+{"success": true, "details": "<what was done>"}
+On failure: {"success": false, "error": "<reason>"}

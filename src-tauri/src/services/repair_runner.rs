@@ -66,6 +66,9 @@ fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
             if let Some(v) = parsed.get("port").and_then(|v| v.as_u64()) { details.push(format!("Port: {}", v)); }
         }
         "checkConfig" => {
+            if parsed.get("valid_json").and_then(|v| v.as_bool()) == Some(false) {
+                details.push("Invalid JSON".to_string());
+            }
             if parsed.get("model_configured").and_then(|v| v.as_bool()) == Some(true) {
                 details.push("Model configured".to_string());
             } else {
@@ -115,6 +118,7 @@ fn has_issue(step_id: &str, parsed: &Value) -> bool {
         "checkConfig" => {
             parsed.get("model_configured").and_then(|v| v.as_bool()) != Some(true)
                 || parsed.get("has_config").and_then(|v| v.as_bool()) != Some(true)
+                || parsed.get("valid_json").and_then(|v| v.as_bool()) == Some(false)
         }
         "checkModelRequest" => {
             let provider_ok = parsed
@@ -190,6 +194,10 @@ pub async fn run_fix(
     let prompt = render(FIX_TEMPLATE, &[
         ("step_id", step_id),
         ("issue_description", issue_description),
+        ("base_url", &config.base_url),
+        ("api_key", &config.api_key),
+        ("model", &config.model),
+        ("port", &config.gateway_port.to_string()),
     ]);
 
     let mut session = Session::with_messages(vec![serde_json::json!({

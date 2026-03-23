@@ -105,6 +105,16 @@ fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
     details
 }
 
+fn build_fix_guidance(step_id: &str) -> &'static str {
+    match step_id {
+        "checkGateway" => include_str!("../prompts/repair/fix_checkGateway.md"),
+        "checkConfig" => include_str!("../prompts/repair/fix_checkConfig.md"),
+        "checkModelRequest" => include_str!("../prompts/repair/fix_checkModelRequest.md"),
+        "runDoctor" => include_str!("../prompts/repair/fix_runDoctor.md"),
+        _ => "",
+    }
+}
+
 fn build_system_prompt(base: &str) -> String {
     format!("{base}{KNOWLEDGE_BASE}")
 }
@@ -191,9 +201,11 @@ pub async fn run_fix(
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("fix"))];
 
+    let guidance = build_fix_guidance(step_id);
     let prompt = render(FIX_TEMPLATE, &[
         ("step_id", step_id),
         ("issue_description", issue_description),
+        ("guidance", guidance),
         ("base_url", &config.base_url),
         ("api_key", &config.api_key),
         ("model", &config.model),

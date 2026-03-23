@@ -285,8 +285,12 @@ mod tests {
     async fn test_background_process_returns_promptly() {
         let tool = BashTool::new();
         let start = std::time::Instant::now();
+        #[cfg(windows)]
+        let cmd = "Start-Process powershell -ArgumentList '-Command Start-Sleep 60' -WindowStyle Hidden; Write-Output 'started'";
+        #[cfg(not(windows))]
+        let cmd = "sleep 60 > /dev/null 2>&1 &\necho started";
         let result = tool
-            .run(serde_json::json!({"command": "sleep 60 > /dev/null 2>&1 &\necho started"}))
+            .run(serde_json::json!({"command": cmd}))
             .await
             .unwrap();
         let elapsed = start.elapsed();

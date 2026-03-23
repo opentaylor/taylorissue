@@ -7,7 +7,7 @@
 The world's only OpenClaw repair software. An agent that manages agents.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-0.1.1-orange.svg)]()
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8D8.svg?logo=tauri)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)](https://react.dev/)
 [![Release](https://img.shields.io/badge/release-March%2021%202026-green.svg)]()

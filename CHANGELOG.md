@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.1 - 2026-03-23
+
+### Bug Fixes
+
+- Fixed a bug in one-click repair for OpenClaw
+- Fixed a bug in one-click install for OpenClaw
+
 ## v0.1.0 - 2026-03-21
 
 ### New Features

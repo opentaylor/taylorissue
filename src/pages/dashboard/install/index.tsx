@@ -12,13 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { ErrorDialog } from "@/components/error-dialog"
 import {
   ChainOfThought,
   ChainOfThoughtContent,
@@ -86,50 +80,6 @@ function StepStatusIcon({ status }: { status: WorkflowStepStatus }) {
     return <XCircleIcon className="size-3.5 text-destructive" />
   }
   return null
-}
-
-function InstallErrorDialog({
-  errorInfo,
-  stepLabel,
-  onClose,
-}: {
-  errorInfo: { stepId: string; message: string }
-  stepLabel: string
-  onClose: () => void
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <XCircleIcon className="size-5 text-destructive" />
-            {t("page.install.error.title")}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-2">
-          {stepLabel && (
-            <p className="text-base font-medium">
-              {t("page.install.error.failedStep", { step: stepLabel })}
-            </p>
-          )}
-          <div className="max-h-60 overflow-y-auto rounded-md bg-muted p-3">
-            <p className="font-mono text-sm leading-relaxed">
-              {errorInfo.message}
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" size="lg" onClick={onClose}>
-            {t("page.install.error.close")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
 }
 
 export default function InstallPage() {
@@ -281,13 +231,14 @@ export default function InstallPage() {
         </CardFooter>
       </Card>
 
-      {errorInfo && showErrorDialog && (
-        <InstallErrorDialog
-          errorInfo={errorInfo}
-          stepLabel={errorStepLabel}
-          onClose={() => setShowErrorDialog(false)}
-        />
-      )}
+      <ErrorDialog
+        open={!!errorInfo && showErrorDialog}
+        title={t("page.install.error.title")}
+        message={errorInfo?.message ?? ""}
+        stepLabel={errorStepLabel ? t("page.install.error.failedStep", { step: errorStepLabel }) : undefined}
+        closeLabel={t("page.install.error.close")}
+        onClose={() => setShowErrorDialog(false)}
+      />
     </div>
   )
 }

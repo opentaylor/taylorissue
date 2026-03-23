@@ -2,8 +2,6 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-// ---- JsonFile ----
-
 pub struct JsonFile {
     path: PathBuf,
 }
@@ -37,8 +35,6 @@ impl JsonFile {
         &self.path
     }
 }
-
-// ---- JsonlFile ----
 
 pub struct JsonlFile {
     path: PathBuf,
@@ -91,8 +87,6 @@ impl JsonlFile {
         &self.path
     }
 }
-
-// ---- DirStore ----
 
 pub struct DirStore {
     root: PathBuf,

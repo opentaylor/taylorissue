@@ -35,6 +35,7 @@ interface MessageState {
   conversations: ConversationMap
   loadedAgentIds: Set<string>
   isTyping: boolean
+  lastError: string | null
   initialize: () => Promise<void>
   selectAgent: (agentId: string) => void
   ensureConversation: (
@@ -46,6 +47,7 @@ interface MessageState {
     agentId: string,
     buildGreeting: (agent: AgentEntry) => string,
   ) => Promise<void>
+  clearError: () => void
 }
 
 export const useMessageStore = create<MessageState>((set, get) => ({
@@ -55,6 +57,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   conversations: {},
   loadedAgentIds: new Set<string>(),
   isTyping: false,
+  lastError: null,
 
   initialize: async () => {
     set({ agentsLoading: true })
@@ -174,15 +177,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           },
         }))
       })
-    } catch {
-      fullContent = fullContent || "Error getting response. Check API connection."
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Unknown error"
+      set({ lastError: errMsg || "Error getting response. Check API connection." })
       set((state) => ({
         conversations: {
           ...state.conversations,
-          [agentId]: (state.conversations[agentId] || []).map((message) =>
-            message.id === assistantMessageId
-              ? { ...message, content: fullContent }
-              : message,
+          [agentId]: (state.conversations[agentId] || []).filter(
+            (message) => message.id !== assistantMessageId,
           ),
         },
       }))
@@ -190,17 +192,23 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       set({ isTyping: false })
     }
 
-    const finalAssistantMessage: ChatMessage = {
-      ...assistantMessage,
-      content: fullContent,
-      timestamp: Date.now(),
-    }
+    if (fullContent) {
+      const finalAssistantMessage: ChatMessage = {
+        ...assistantMessage,
+        content: fullContent,
+        timestamp: Date.now(),
+      }
 
-    void syncMessages(
-      agentId,
-      [userMessage, finalAssistantMessage].map(chatToStored),
-    ).catch(() => {})
+      void syncMessages(
+        agentId,
+        [userMessage, finalAssistantMessage].map(chatToStored),
+      ).catch(() => {})
+    } else {
+      void syncMessages(agentId, [chatToStored(userMessage)]).catch(() => {})
+    }
   },
+
+  clearError: () => set({ lastError: null }),
 
   clearAgentConversation: async (agentId, buildGreeting) => {
     const agent = get().agents.find((item) => item.id === agentId)

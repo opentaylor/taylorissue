@@ -73,6 +73,57 @@ fn get_agent(agent_id: &str, config: &AppConfig) -> Option<AgentEntry> {
     agents.into_iter().find(|a| a.id == agent_id)
 }
 
+fn extract_error(v: &Value) -> Option<String> {
+    if let Some(err) = v.get("error") {
+        if let Some(msg) = err.get("message").and_then(|m| m.as_str()) {
+            return Some(msg.to_string());
+        }
+        if let Some(s) = err.as_str() {
+            return Some(s.to_string());
+        }
+        return Some(err.to_string());
+    }
+    None
+}
+
+async fn probe_gateway_error(
+    client: &reqwest::Client,
+    url: &str,
+    token: &str,
+    model: &str,
+) -> Option<String> {
+    let probe = serde_json::json!({
+        "model": model,
+        "stream": false,
+        "max_tokens": 1,
+        "messages": [{"role": "user", "content": "hi"}],
+    });
+    let resp = client
+        .post(url)
+        .header("Authorization", format!("Bearer {}", token))
+        .json(&probe)
+        .send()
+        .await
+        .ok()?;
+    let body: Value = resp.json().await.ok()?;
+    let total_tokens = body
+        .pointer("/usage/total_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1);
+    if total_tokens == 0 {
+        let content = body
+            .pointer("/choices/0/message/content")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if !content.is_empty() {
+            log::warn!("[stream_chat] probe detected gateway error: {}", content);
+            return Some(content);
+        }
+    }
+    None
+}
+
 pub async fn stream_chat(
     agent_id: &str,
     messages: Vec<(String, String)>,
@@ -154,12 +205,18 @@ pub async fn stream_chat(
             use futures::StreamExt;
             let mut stream = response.bytes_stream();
             let mut buffer = String::new();
+            let mut got_content = false;
+            let mut got_error = false;
 
             while let Some(chunk_result) = stream.next().await {
                 let chunk = match chunk_result {
                     Ok(c) => c,
                     Err(e) => {
-                        log::warn!("Stream chunk error: {}", e);
+                        log::warn!("[stream_chat] chunk error: {}", e);
+                        if !got_content {
+                            let _ = channel.send(serde_json::json!({"error": e.to_string()}));
+                            got_error = true;
+                        }
                         break;
                     }
                 };
@@ -170,13 +227,30 @@ pub async fn stream_chat(
                     buffer = buffer[newline_pos + 1..].to_string();
 
                     if line.is_empty() { continue; }
-                    if !line.starts_with("data: ") { continue; }
+                    if !line.starts_with("data: ") {
+                        if !got_content && !got_error {
+                            if let Ok(parsed) = serde_json::from_str::<Value>(&line) {
+                                if let Some(err) = extract_error(&parsed) {
+                                    log::warn!("[stream_chat] stream error: {}", err);
+                                    let _ = channel.send(serde_json::json!({"error": err}));
+                                    got_error = true;
+                                }
+                            }
+                        }
+                        continue;
+                    }
 
                     let data_str = &line[6..];
                     if data_str == "[DONE]" {
                         break;
                     }
                     if let Ok(parsed) = serde_json::from_str::<Value>(data_str) {
+                        if let Some(err) = extract_error(&parsed) {
+                            log::warn!("[stream_chat] stream error: {}", err);
+                            let _ = channel.send(serde_json::json!({"error": err}));
+                            got_error = true;
+                            continue;
+                        }
                         let content = parsed
                             .get("choices")
                             .and_then(|c| c.get(0))
@@ -184,11 +258,32 @@ pub async fn stream_chat(
                             .and_then(|d| d.get("content"))
                             .and_then(|c| c.as_str());
                         if let Some(text) = content {
+                            got_content = true;
                             let _ = channel.send(serde_json::json!({"content": text}));
                         }
                     }
                 }
             }
+
+            if !got_content && !got_error {
+                let remaining = buffer.trim().to_string();
+                if !remaining.is_empty() {
+                    if let Ok(parsed) = serde_json::from_str::<Value>(&remaining) {
+                        if let Some(err) = extract_error(&parsed) {
+                            let _ = channel.send(serde_json::json!({"error": err}));
+                            got_error = true;
+                        }
+                    }
+                }
+                if !got_error {
+                    if let Some(err) = probe_gateway_error(&client, &url, gateway_token, &model).await {
+                        let _ = channel.send(serde_json::json!({"error": err}));
+                    } else {
+                        let _ = channel.send(serde_json::json!({"error": "No response received from the model. Check your API key and quota."}));
+                    }
+                }
+            }
+
             let _ = channel.send(serde_json::json!({"done": true}));
         }
         Err(e) => {

@@ -49,10 +49,6 @@ impl AppConfig {
         format!("http://localhost:{}/v1", self.gateway_port)
     }
 
-    /// Resolves workspace_path from the user-provided value.
-    /// Accepts either an OpenClaw metadata dir (~/.openclaw/) or a direct
-    /// workspace path. When a metadata dir is given, auto-detects the
-    /// workspace inside it. Falls back to setup_detection if needed.
     pub fn resolve_workspace_path(&self) -> String {
         let raw = self.expand_tilde(&self.workspace_path);
 

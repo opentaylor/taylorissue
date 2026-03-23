@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ErrorDialog } from "@/components/error-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -24,7 +25,6 @@ import {
   ExternalLinkIcon,
   LoaderIcon,
   SearchIcon,
-  XCircleIcon,
 } from "lucide-react"
 import { PageLoading } from "./shared"
 
@@ -36,7 +36,7 @@ interface InstallResult {
   outputs: string[]
 }
 
-function InstallResultDialog({
+function InstallSuccessDialog({
   result,
   onOpenChange,
 }: {
@@ -50,14 +50,8 @@ function InstallResultDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {result?.ok ? (
-              <CheckCircleIcon className="size-5 text-green-500" />
-            ) : (
-              <XCircleIcon className="size-5 text-destructive" />
-            )}
-            {result?.ok
-              ? t("page.skill.installSuccess")
-              : t("page.skill.installFailed")}
+            <CheckCircleIcon className="size-5 text-green-500" />
+            {t("page.skill.installSuccess")}
           </DialogTitle>
           <DialogDescription>{result?.skillName}</DialogDescription>
         </DialogHeader>
@@ -98,7 +92,8 @@ export default function MarketplacePage() {
 
   const [query, setQuery] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
-  const [installResult, setInstallResult] = useState<InstallResult | null>(null)
+  const [successResult, setSuccessResult] = useState<InstallResult | null>(null)
+  const [errorResult, setErrorResult] = useState<InstallResult | null>(null)
   const didInit = useRef(false)
 
   useEffect(() => {
@@ -120,11 +115,12 @@ export default function MarketplacePage() {
   const handleInstall = async (slug: string) => {
     const result = await installHubSkill(slug)
     if (result) {
-      setInstallResult({
-        skillName: slug,
-        ok: result.ok,
-        outputs: result.outputs,
-      })
+      const entry = { skillName: slug, ok: result.ok, outputs: result.outputs }
+      if (result.ok) {
+        setSuccessResult(entry)
+      } else {
+        setErrorResult(entry)
+      }
     }
   }
 
@@ -234,11 +230,20 @@ export default function MarketplacePage() {
         </>
       ) : null}
 
-      <InstallResultDialog
-        result={installResult}
+      <InstallSuccessDialog
+        result={successResult}
         onOpenChange={(open) => {
-          if (!open) setInstallResult(null)
+          if (!open) setSuccessResult(null)
         }}
+      />
+
+      <ErrorDialog
+        open={!!errorResult}
+        title={t("page.skill.installFailed")}
+        message={errorResult?.outputs.join("\n") ?? ""}
+        stepLabel={errorResult?.skillName}
+        closeLabel={t("page.skill.close")}
+        onClose={() => setErrorResult(null)}
       />
     </div>
   )

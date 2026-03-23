@@ -20,12 +20,6 @@ fn path_entry_count(path: &str) -> usize {
         .count()
 }
 
-/// Returns a PATH string that mirrors the user's login shell (Unix) or
-/// machine + user PATH from the registry / PowerShell (Windows).
-///
-/// macOS `.app` bundles launched from Finder inherit a minimal PATH
-/// (`/usr/bin:/bin:/usr/sbin:/sbin`). GUI apps on Windows similarly get a
-/// reduced PATH. This function resolves a fuller PATH once and caches it.
 pub fn full_path() -> &'static str {
     RESOLVED_PATH.get_or_init(|| {
         let base = match path_from_login_shell() {
@@ -100,7 +94,7 @@ fn path_from_login_shell() -> Option<String> {
     if path.is_empty() {
         return None;
     }
-    // Windows PATH uses semicolons and/or drive letters
+
     if path.contains(';') || path.contains('\\') {
         return Some(path.to_string());
     }
@@ -209,12 +203,10 @@ fn glob_latest_nvm_bin(home: &str) -> Result<String, ()> {
         .ok_or(())
 }
 
-/// Apply the resolved PATH to a `std::process::Command`.
 pub fn apply_env(cmd: &mut Command) -> &mut Command {
     cmd.env("PATH", full_path())
 }
 
-/// Apply the resolved PATH to a `tokio::process::Command`.
 pub fn apply_env_async(cmd: &mut tokio::process::Command) -> &mut tokio::process::Command {
     cmd.env("PATH", full_path())
 }

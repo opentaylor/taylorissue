@@ -3,7 +3,6 @@ pub mod clawhub_client;
 pub mod conversation_store;
 pub mod install_runner;
 pub mod message_service;
-pub mod openclaw_ref;
 pub mod repair_runner;
 pub mod setup_detection;
 pub mod shell_env;

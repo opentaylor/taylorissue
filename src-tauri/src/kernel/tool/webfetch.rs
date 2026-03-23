@@ -1,7 +1,18 @@
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::Deserialize;
 use serde_json::Value;
 
-use super::base::BaseTool;
+use super::base::{schema_for, BaseTool};
+
+#[derive(Deserialize, JsonSchema)]
+struct WebFetchArgs {
+    /// The URL to fetch
+    url: String,
+    /// Output format: text, html, or markdown
+    #[serde(default)]
+    format: Option<String>,
+}
 
 pub struct WebFetchTool {
     max_size: usize,
@@ -23,14 +34,14 @@ impl Default for WebFetchTool {
 
 pub fn html_to_text(html: &str) -> String {
     let mut text = html.to_string();
-    // Strip tags
+
     let re = regex::Regex::new(r"<script[^>]*>[\s\S]*?</script>").unwrap();
     text = re.replace_all(&text, "").to_string();
     let re = regex::Regex::new(r"<style[^>]*>[\s\S]*?</style>").unwrap();
     text = re.replace_all(&text, "").to_string();
     let re = regex::Regex::new(r"<[^>]+>").unwrap();
     text = re.replace_all(&text, "").to_string();
-    // Decode common entities
+
     text = text
         .replace("&amp;", "&")
         .replace("&lt;", "<")
@@ -38,7 +49,7 @@ pub fn html_to_text(html: &str) -> String {
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace("&nbsp;", " ");
-    // Collapse whitespace
+
     let re = regex::Regex::new(r"\n{3,}").unwrap();
     text = re.replace_all(&text, "\n\n").to_string();
     text.trim().to_string()
@@ -46,40 +57,18 @@ pub fn html_to_text(html: &str) -> String {
 
 #[async_trait]
 impl BaseTool for WebFetchTool {
-    fn name(&self) -> &str {
-        "web_fetch"
-    }
-
-    fn description(&self) -> &str {
-        "Fetch a URL and return its content as text."
-    }
-
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "url": {"type": "string", "description": "The URL to fetch"},
-                "format": {"type": "string", "description": "Output format: text, html, or markdown"}
-            },
-            "required": ["url"]
-        })
-    }
+    fn name(&self) -> &str { "web_fetch" }
+    fn description(&self) -> &str { "Fetch a URL and return its content as text." }
+    fn params_schema(&self) -> Value { schema_for::<WebFetchArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let url = args
-            .get("url")
-            .and_then(|v| v.as_str())
-            .ok_or("Missing 'url' argument")?;
+        let args: WebFetchArgs = serde_json::from_value(args)?;
+        let format = args.format.as_deref().unwrap_or("text");
 
-        let format = args
-            .get("format")
-            .and_then(|v| v.as_str())
-            .unwrap_or("text");
-
-        let url = if !url.starts_with("http://") && !url.starts_with("https://") {
-            format!("https://{}", url)
+        let url = if !args.url.starts_with("http://") && !args.url.starts_with("https://") {
+            format!("https://{}", args.url)
         } else {
-            url.to_string()
+            args.url
         };
 
         let client = reqwest::Client::builder()
@@ -151,6 +140,6 @@ mod tests {
         let tool = WebFetchTool::new();
         assert_eq!(tool.name(), "web_fetch");
         let schema = tool.params_schema();
-        assert!(schema["properties"]["url"].is_object());
+        assert!(schema.get("properties").is_some());
     }
 }

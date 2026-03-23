@@ -21,6 +21,10 @@ pub trait BaseTool: Send + Sync {
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
 }
 
+pub fn schema_for<T: schemars::JsonSchema>() -> Value {
+    serde_json::to_value(schemars::schema_for!(T)).unwrap()
+}
+
 pub struct FunctionTool {
     pub name: String,
     pub description: String,
@@ -44,29 +48,9 @@ impl BaseTool for FunctionTool {
     }
 }
 
-pub fn schema_for_type(type_name: &str) -> Value {
-    match type_name {
-        "String" | "str" | "&str" => serde_json::json!({"type": "string"}),
-        "i32" | "i64" | "u32" | "u64" | "usize" | "isize" => {
-            serde_json::json!({"type": "integer"})
-        }
-        "f32" | "f64" => serde_json::json!({"type": "number"}),
-        "bool" => serde_json::json!({"type": "boolean"}),
-        _ => serde_json::json!({"type": "string"}),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_schema_for_type() {
-        assert_eq!(schema_for_type("String")["type"], "string");
-        assert_eq!(schema_for_type("i32")["type"], "integer");
-        assert_eq!(schema_for_type("f64")["type"], "number");
-        assert_eq!(schema_for_type("bool")["type"], "boolean");
-    }
 
     #[tokio::test]
     async fn test_function_tool() {

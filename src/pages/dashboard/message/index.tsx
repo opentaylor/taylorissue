@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ArrowDownIcon, LoaderIcon, Trash2Icon } from "lucide-react"
+import { ErrorDialog } from "@/components/error-dialog"
 import { useMessageStore } from "@/stores/message-store"
 import type { AgentEntry, ChatMessage } from "@/types/chat"
 
@@ -147,6 +148,8 @@ export default function MessagePage() {
     ensureConversation,
     sendMessage,
     clearAgentConversation,
+    lastError,
+    clearError,
   } = useMessageStore()
 
   const selectedAgent = useMemo(
@@ -411,6 +414,13 @@ export default function MessagePage() {
           )}
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      <ErrorDialog
+        open={!!lastError}
+        title={t("page.message.title")}
+        message={lastError ?? ""}
+        onClose={clearError}
+      />
     </div>
   )
 }

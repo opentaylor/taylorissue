@@ -25,7 +25,9 @@ fn disable_webview2_overscroll(app: &tauri::App) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::init();
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info")
+    ).init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -35,21 +37,21 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // Install
+
             commands::install::start_install,
-            // Repair
+
             commands::repair::start_repair,
             commands::repair::fix_step,
             commands::repair::start_custom_fix,
-            // Uninstall
+
             commands::uninstall::start_uninstall,
-            // Message
+
             commands::message::list_agents,
             commands::message::message_chat,
             commands::message::get_conversation,
             commands::message::append_conversation,
             commands::message::clear_conversation,
-            // Skill
+
             commands::skill::list_skills,
             commands::skill::install_skill,
             commands::skill::uninstall_skill,

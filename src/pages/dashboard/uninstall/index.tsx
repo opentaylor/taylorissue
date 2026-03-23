@@ -12,13 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { ErrorDialog } from "@/components/error-dialog"
 import {
   ChainOfThought,
   ChainOfThoughtContent,
@@ -84,50 +78,6 @@ function StepDetailBadges({ details }: { details: string[] }) {
         </ChainOfThoughtSearchResult>
       ))}
     </ChainOfThoughtSearchResults>
-  )
-}
-
-function UninstallErrorDialog({
-  errorInfo,
-  stepLabel,
-  onClose,
-}: {
-  errorInfo: { stepId: string; message: string }
-  stepLabel: string
-  onClose: () => void
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <XCircleIcon className="size-5 text-destructive" />
-            {t("page.uninstall.error.title")}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-2">
-          {stepLabel && (
-            <p className="text-base font-medium">
-              {t("page.uninstall.error.failedStep", { step: stepLabel })}
-            </p>
-          )}
-          <div className="max-h-60 overflow-y-auto rounded-md bg-muted p-3">
-            <p className="font-mono text-sm leading-relaxed">
-              {errorInfo.message}
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" size="lg" onClick={onClose}>
-            {t("page.uninstall.error.close")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -314,13 +264,14 @@ export default function UninstallPage() {
         </CardFooter>
       </Card>
 
-      {errorInfo && (
-        <UninstallErrorDialog
-          errorInfo={errorInfo}
-          stepLabel={errorStepLabel}
-          onClose={clearError}
-        />
-      )}
+      <ErrorDialog
+        open={!!errorInfo}
+        title={t("page.uninstall.error.title")}
+        message={errorInfo?.message ?? ""}
+        stepLabel={errorStepLabel ? t("page.uninstall.error.failedStep", { step: errorStepLabel }) : undefined}
+        closeLabel={t("page.uninstall.error.close")}
+        onClose={clearError}
+      />
     </div>
   )
 }

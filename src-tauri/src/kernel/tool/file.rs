@@ -1,11 +1,24 @@
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::Deserialize;
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
 
-use super::base::BaseTool;
+use super::base::{schema_for, BaseTool};
 
-// ---- EditTool ----
+#[derive(Deserialize, JsonSchema)]
+struct EditArgs {
+    /// Path to the file
+    file_path: String,
+    /// Exact text to find
+    old_string: String,
+    /// Replacement text
+    new_string: String,
+    /// Replace all occurrences
+    #[serde(default)]
+    replace_all: Option<bool>,
+}
 
 pub struct EditTool;
 
@@ -13,43 +26,35 @@ pub struct EditTool;
 impl BaseTool for EditTool {
     fn name(&self) -> &str { "edit" }
     fn description(&self) -> &str { "Replace an exact string in a file with new content." }
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "file_path": {"type": "string", "description": "Path to the file"},
-                "old_string": {"type": "string", "description": "Exact text to find"},
-                "new_string": {"type": "string", "description": "Replacement text"},
-                "replace_all": {"type": "boolean", "description": "Replace all occurrences"}
-            },
-            "required": ["file_path", "old_string", "new_string"]
-        })
-    }
+    fn params_schema(&self) -> Value { schema_for::<EditArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let file_path = args.get("file_path").and_then(|v| v.as_str()).ok_or("Missing file_path")?;
-        let old_string = args.get("old_string").and_then(|v| v.as_str()).ok_or("Missing old_string")?;
-        let new_string = args.get("new_string").and_then(|v| v.as_str()).ok_or("Missing new_string")?;
-        let replace_all = args.get("replace_all").and_then(|v| v.as_bool()).unwrap_or(false);
+        let args: EditArgs = serde_json::from_value(args)?;
+        let content = fs::read_to_string(&args.file_path)?;
 
-        let content = fs::read_to_string(file_path)?;
-
-        if !content.contains(old_string) {
-            return Ok(format!("Error: '{}' not found in {}", old_string, file_path));
+        if !content.contains(&args.old_string) {
+            return Ok(format!("Error: '{}' not found in {}", args.old_string, args.file_path));
         }
 
-        let new_content = if replace_all {
-            content.replace(old_string, new_string)
+        let new_content = if args.replace_all.unwrap_or(false) {
+            content.replace(&args.old_string, &args.new_string)
         } else {
-            content.replacen(old_string, new_string, 1)
+            content.replacen(&args.old_string, &args.new_string, 1)
         };
 
-        fs::write(file_path, &new_content)?;
-        Ok(format!("Successfully edited {}", file_path))
+        fs::write(&args.file_path, &new_content)?;
+        Ok(format!("Successfully edited {}", args.file_path))
     }
 }
 
-// ---- FindTool ----
+#[derive(Deserialize, JsonSchema)]
+struct FindArgs {
+    /// Glob pattern
+    pattern: String,
+    /// Root directory
+    #[serde(default)]
+    path: Option<String>,
+}
 
 pub struct FindTool;
 
@@ -57,25 +62,16 @@ pub struct FindTool;
 impl BaseTool for FindTool {
     fn name(&self) -> &str { "find" }
     fn description(&self) -> &str { "Find files matching a glob pattern." }
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "pattern": {"type": "string", "description": "Glob pattern"},
-                "path": {"type": "string", "description": "Root directory"}
-            },
-            "required": ["pattern"]
-        })
-    }
+    fn params_schema(&self) -> Value { schema_for::<FindArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let pattern = args.get("pattern").and_then(|v| v.as_str()).ok_or("Missing pattern")?;
-        let root = args.get("path").and_then(|v| v.as_str()).unwrap_or(".");
+        let args: FindArgs = serde_json::from_value(args)?;
+        let root = args.path.as_deref().unwrap_or(".");
 
-        let full_pattern = if pattern.starts_with('/') || pattern.starts_with('.') {
-            pattern.to_string()
+        let full_pattern = if args.pattern.starts_with('/') || args.pattern.starts_with('.') {
+            args.pattern
         } else {
-            format!("{}/{}", root, pattern)
+            format!("{}/{}", root, args.pattern)
         };
 
         let mut results = Vec::new();
@@ -93,7 +89,17 @@ impl BaseTool for FindTool {
     }
 }
 
-// ---- GrepTool ----
+#[derive(Deserialize, JsonSchema)]
+struct GrepArgs {
+    /// Regex pattern to search for
+    pattern: String,
+    /// File or directory to search
+    #[serde(default)]
+    path: Option<String>,
+    /// Glob for file filtering
+    #[serde(default)]
+    include: Option<String>,
+}
 
 pub struct GrepTool;
 
@@ -101,31 +107,18 @@ pub struct GrepTool;
 impl BaseTool for GrepTool {
     fn name(&self) -> &str { "grep" }
     fn description(&self) -> &str { "Search file contents for a regex pattern." }
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "pattern": {"type": "string", "description": "Regex pattern to search for"},
-                "path": {"type": "string", "description": "File or directory to search"},
-                "include": {"type": "string", "description": "Glob for file filtering"}
-            },
-            "required": ["pattern"]
-        })
-    }
+    fn params_schema(&self) -> Value { schema_for::<GrepArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let pattern = args.get("pattern").and_then(|v| v.as_str()).ok_or("Missing pattern")?;
-        let path = args.get("path").and_then(|v| v.as_str()).unwrap_or(".");
-        let include = args.get("include").and_then(|v| v.as_str());
-
-        let re = regex::Regex::new(pattern)?;
+        let args: GrepArgs = serde_json::from_value(args)?;
+        let re = regex::Regex::new(&args.pattern)?;
         let mut results = Vec::new();
 
-        let path = Path::new(path);
+        let path = Path::new(args.path.as_deref().unwrap_or("."));
         if path.is_file() {
             grep_file(&re, path, &mut results)?;
         } else if path.is_dir() {
-            grep_dir(&re, path, include, &mut results)?;
+            grep_dir(&re, path, args.include.as_deref(), &mut results)?;
         }
 
         if results.is_empty() {
@@ -175,7 +168,12 @@ fn grep_dir(
     Ok(())
 }
 
-// ---- LsTool ----
+#[derive(Deserialize, JsonSchema)]
+struct LsArgs {
+    /// Directory to list
+    #[serde(default)]
+    path: Option<String>,
+}
 
 pub struct LsTool;
 
@@ -183,18 +181,11 @@ pub struct LsTool;
 impl BaseTool for LsTool {
     fn name(&self) -> &str { "ls" }
     fn description(&self) -> &str { "List directory contents." }
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "Directory to list"}
-            },
-            "required": ["path"]
-        })
-    }
+    fn params_schema(&self) -> Value { schema_for::<LsArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args.get("path").and_then(|v| v.as_str()).unwrap_or(".");
+        let args: LsArgs = serde_json::from_value(args)?;
+        let path = args.path.as_deref().unwrap_or(".");
         let mut entries = Vec::new();
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -208,7 +199,17 @@ impl BaseTool for LsTool {
     }
 }
 
-// ---- ReadTool ----
+#[derive(Deserialize, JsonSchema)]
+struct ReadArgs {
+    /// Path to the file
+    file_path: String,
+    /// Start line (1-indexed)
+    #[serde(default)]
+    offset: Option<usize>,
+    /// Number of lines to read
+    #[serde(default)]
+    limit: Option<usize>,
+}
 
 pub struct ReadTool;
 
@@ -216,28 +217,15 @@ pub struct ReadTool;
 impl BaseTool for ReadTool {
     fn name(&self) -> &str { "read" }
     fn description(&self) -> &str { "Read a file and return its contents." }
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "file_path": {"type": "string", "description": "Path to the file"},
-                "offset": {"type": "integer", "description": "Start line (1-indexed)"},
-                "limit": {"type": "integer", "description": "Number of lines to read"}
-            },
-            "required": ["file_path"]
-        })
-    }
+    fn params_schema(&self) -> Value { schema_for::<ReadArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let file_path = args.get("file_path").and_then(|v| v.as_str()).ok_or("Missing file_path")?;
-        let offset = args.get("offset").and_then(|v| v.as_u64()).map(|v| v as usize);
-        let limit = args.get("limit").and_then(|v| v.as_u64()).map(|v| v as usize);
-
-        let content = fs::read_to_string(file_path)?;
+        let args: ReadArgs = serde_json::from_value(args)?;
+        let content = fs::read_to_string(&args.file_path)?;
         let lines: Vec<&str> = content.lines().collect();
 
-        let start = offset.unwrap_or(1).saturating_sub(1);
-        let end = match limit {
+        let start = args.offset.unwrap_or(1).saturating_sub(1);
+        let end = match args.limit {
             Some(l) => (start + l).min(lines.len()),
             None => lines.len(),
         };
@@ -252,7 +240,13 @@ impl BaseTool for ReadTool {
     }
 }
 
-// ---- WriteTool ----
+#[derive(Deserialize, JsonSchema)]
+struct WriteArgs {
+    /// Path to the file
+    file_path: String,
+    /// Content to write
+    content: String,
+}
 
 pub struct WriteTool;
 
@@ -260,27 +254,16 @@ pub struct WriteTool;
 impl BaseTool for WriteTool {
     fn name(&self) -> &str { "write" }
     fn description(&self) -> &str { "Write content to a file, creating directories if needed." }
-    fn params_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "file_path": {"type": "string", "description": "Path to the file"},
-                "content": {"type": "string", "description": "Content to write"}
-            },
-            "required": ["file_path", "content"]
-        })
-    }
+    fn params_schema(&self) -> Value { schema_for::<WriteArgs>() }
 
     async fn run(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let file_path = args.get("file_path").and_then(|v| v.as_str()).ok_or("Missing file_path")?;
-        let content = args.get("content").and_then(|v| v.as_str()).ok_or("Missing content")?;
-
-        let path = Path::new(file_path);
+        let args: WriteArgs = serde_json::from_value(args)?;
+        let path = Path::new(&args.file_path);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        fs::write(file_path, content)?;
-        Ok(format!("Successfully wrote to {}", file_path))
+        fs::write(&args.file_path, &args.content)?;
+        Ok(format!("Successfully wrote to {}", args.file_path))
     }
 }
 

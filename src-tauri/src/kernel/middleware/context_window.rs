@@ -18,7 +18,6 @@ impl ContextWindowMiddleware {
 }
 
 pub fn fix_tool_boundaries(messages: &[Value]) -> Vec<Value> {
-    let mut result: Vec<Value> = Vec::new();
     let mut required_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     for msg in messages {
@@ -34,6 +33,7 @@ pub fn fix_tool_boundaries(messages: &[Value]) -> Vec<Value> {
         }
     }
 
+    let mut result: Vec<Value> = Vec::new();
     for msg in messages {
         let role = msg.get("role").and_then(|v| v.as_str()).unwrap_or("");
         if role == "tool" {

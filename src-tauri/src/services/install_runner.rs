@@ -52,11 +52,6 @@ struct ResolvedScripts {
     openclaw: String,
 }
 
-/// On Windows, PowerShell 5.1 cannot handle non-ASCII characters in paths
-/// passed via `-Command`. When a resolved path contains non-ASCII chars
-/// (e.g. the app name 一修哥), copy the script to an ASCII-safe directory.
-/// Also strips the Windows `\\?\` extended-length path prefix that Tauri's
-/// resource resolver may produce, since PowerShell doesn't handle it well.
 fn safe_script_path(source: &std::path::Path, filename: &str) -> String {
     let s = source.to_string_lossy();
     let s = s.strip_prefix(r"\\?\").unwrap_or(&s);
@@ -81,9 +76,6 @@ fn safe_script_path(source: &std::path::Path, filename: &str) -> String {
     }
 }
 
-/// Returns the platform-specific taylorissue data directory.
-/// Windows: %LOCALAPPDATA%\taylorissue
-/// macOS/Linux: ~/.taylorissue
 fn taylorissue_dir() -> std::path::PathBuf {
     #[cfg(windows)]
     {

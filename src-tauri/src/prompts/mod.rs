@@ -1,4 +1,3 @@
-/// Replace `{key}` placeholders in a template string with provided values.
 pub fn render(template: &str, vars: &[(&str, &str)]) -> String {
     let mut result = template.to_string();
     for (key, value) in vars {

@@ -1,5 +1,4 @@
 use serde_json::Value;
-use std::collections::HashMap;
 use tauri::ipc::Channel;
 
 use crate::kernel::agent::{Agent, Session};
@@ -72,15 +71,16 @@ pub async fn run_step_dynamic(
             is_first_attempt = false;
         }
 
+        agent.session = session.clone();
         let before = session.messages.len();
-        let kwargs = HashMap::new();
-        let result = agent.run(session.clone(), None, kwargs).await;
+        let result = agent.run().await;
 
         match result {
-            Ok(updated) => {
-                *session = updated;
+            Ok(()) => {
+                *session = agent.session.clone();
             }
             Err(e) => {
+                *session = agent.session.clone();
                 last_error = e.to_string();
                 session.messages.push(serde_json::json!({
                     "role": "user",
@@ -196,8 +196,6 @@ pub async fn run_step_dynamic(
     false
 }
 
-/// Channel-free variant of `run_step_dynamic` for use in tests.
-/// Returns the parsed JSON on success, or an error string on failure.
 pub async fn run_step_standalone(
     agent: &mut Agent,
     session: &mut Session,
@@ -217,15 +215,16 @@ pub async fn run_step_standalone(
             is_first_attempt = false;
         }
 
+        agent.session = session.clone();
         let before = session.messages.len();
-        let kwargs = HashMap::new();
-        let result = agent.run(session.clone(), None, kwargs).await;
+        let result = agent.run().await;
 
         match result {
-            Ok(updated) => {
-                *session = updated;
+            Ok(()) => {
+                *session = agent.session.clone();
             }
             Err(e) => {
+                *session = agent.session.clone();
                 last_error = e.to_string();
                 session.messages.push(serde_json::json!({
                     "role": "user",
@@ -314,4 +313,76 @@ pub async fn run_step_standalone(
     } else {
         format!("Step '{}': {}", step_id, last_error)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_json_valid() {
+        let result = extract_json(r#"{"key": "value"}"#);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["key"], "value");
+    }
+
+    #[test]
+    fn test_extract_json_embedded_in_text() {
+        let result = extract_json(r#"Here is the result: {"success": true} and more text"#);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["success"], true);
+    }
+
+    #[test]
+    fn test_extract_json_nested_braces() {
+        let result = extract_json(r#"{"outer": {"inner": 42}}"#);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["outer"]["inner"], 42);
+    }
+
+    #[test]
+    fn test_extract_json_invalid() {
+        let result = extract_json(r#"{not valid json}"#);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_json_no_braces() {
+        let result = extract_json("no json here");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_json_empty_string() {
+        let result = extract_json("");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_json_first_of_multiple() {
+        let result = extract_json(r#"{"a": 1} {"b": 2}"#);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["a"], 1);
+    }
+
+    #[test]
+    fn test_extract_json_empty_object() {
+        let result = extract_json("{}");
+        assert!(result.is_some());
+        assert!(result.unwrap().as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_extract_json_with_array_value() {
+        let result = extract_json(r#"result: {"items": [1, 2, 3]}"#);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["items"].as_array().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_extract_json_braces_in_string() {
+        let result = extract_json(r#"{"msg": "use {x} here"}"#);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["msg"], "use {x} here");
+    }
 }

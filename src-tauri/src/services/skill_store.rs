@@ -159,12 +159,13 @@ pub async fn agent_install(config: &AppConfig, prompt: &str) -> InstallResult {
     let mut outputs = Vec::new();
 
     for attempt in 0..MAX_INSTALL_RETRIES {
+        agent.session = session.clone();
         let before = session.messages.len();
-        let result = agent.run(session.clone(), None, HashMap::new()).await;
+        let result = agent.run().await;
 
         match result {
-            Ok(updated) => {
-                session = updated;
+            Ok(()) => {
+                session = agent.session.clone();
 
                 let text = session.messages[before..]
                     .iter()

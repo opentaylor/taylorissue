@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn test_detect_all_runs() {
         let result = detect_all();
-        // Should not panic
+
         let _ = result.workspace_path;
     }
 }

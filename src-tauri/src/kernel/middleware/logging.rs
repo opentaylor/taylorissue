@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::kernel::agent::Agent;
-use super::base::Middleware;
+use super::base::{AgentError, Middleware, Next};
 
 pub struct LoggingMiddleware {
     pub label: String,
@@ -199,7 +199,6 @@ fn log_assistant_message(label: &str, agent_name: &str, model: &str, msg: &Value
     log::info!("[{}]\n{}", label, tree.to_string_tree());
 }
 
-/// Log all new messages in the range [start..end) dispatching by role.
 fn log_new_messages(label: &str, agent_name: &str, model: &str, messages: &[Value], start: usize, end: usize) {
     let tool_call_map = build_tool_call_map(&messages[..start]);
 
@@ -219,53 +218,40 @@ fn log_new_messages(label: &str, agent_name: &str, model: &str, messages: &[Valu
     }
 }
 
+fn log_messages_since_checkpoint(ctx: &Agent, label: &str, checkpoint: usize) -> usize {
+    let end = ctx.session.messages.len();
+    let model = ctx.llm.as_ref().map(|l| l.model()).unwrap_or("unknown");
+    log_new_messages(label, &ctx.name, model, &ctx.session.messages, checkpoint, end);
+    end
+}
+
 #[async_trait]
 impl Middleware for LoggingMiddleware {
-    /// Before LLM call: log new user messages and tool results since last checkpoint.
-    async fn wrap_llm(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let session = match &agent.session {
-            Some(s) => s,
-            None => return Ok(()),
-        };
+    async fn wrap_llm(&self, ctx: &mut Agent, next: Next<'_>) -> Result<(), AgentError> {
         let start = self.get_checkpoint();
-        let end = session.messages.len();
-        let model = agent.llm.as_ref().map(|l| l.model()).unwrap_or("unknown");
+        self.set_checkpoint(log_messages_since_checkpoint(ctx, &self.label, start));
 
-        log_new_messages(&self.label, &agent.name, model, &session.messages, start, end);
-        self.set_checkpoint(end);
-        Ok(())
+        let result = next.call(ctx).await;
+
+        let start = self.get_checkpoint();
+        self.set_checkpoint(log_messages_since_checkpoint(ctx, &self.label, start));
+
+        result
     }
 
-    /// Before tool execution: log the assistant message (with tool_calls) that was
-    /// just produced by call_llm.
-    async fn wrap_tool(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let session = match &agent.session {
-            Some(s) => s,
-            None => return Ok(()),
-        };
-        let start = self.get_checkpoint();
-        let end = session.messages.len();
-        let model = agent.llm.as_ref().map(|l| l.model()).unwrap_or("unknown");
+    async fn wrap_tool(&self, ctx: &mut Agent, next: Next<'_>) -> Result<(), AgentError> {
+        let result = next.call(ctx).await;
 
-        log_new_messages(&self.label, &agent.name, model, &session.messages, start, end);
-        self.set_checkpoint(end);
-        Ok(())
+        let start = self.get_checkpoint();
+        self.set_checkpoint(log_messages_since_checkpoint(ctx, &self.label, start));
+
+        result
     }
 
-    /// After agent run completes: log any remaining messages (final assistant
-    /// response and tool results from the last iteration).
-    async fn wrap_end(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let session = match &agent.session {
-            Some(s) => s,
-            None => return Ok(()),
-        };
+    async fn wrap_end(&self, ctx: &mut Agent, next: Next<'_>) -> Result<(), AgentError> {
         let start = self.get_checkpoint();
-        let end = session.messages.len();
-        let model = agent.llm.as_ref().map(|l| l.model()).unwrap_or("unknown");
-
-        log_new_messages(&self.label, &agent.name, model, &session.messages, start, end);
-        self.set_checkpoint(end);
-        Ok(())
+        self.set_checkpoint(log_messages_since_checkpoint(ctx, &self.label, start));
+        next.call(ctx).await
     }
 }
 

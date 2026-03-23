@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::kernel::agent::{Agent, Session};
 use crate::kernel::util::store::JsonlFile;
-use super::base::Middleware;
+use super::base::{AgentError, Middleware, Next};
 
 pub struct CheckpointMiddleware {
     pub base_dir: PathBuf,
@@ -62,8 +62,8 @@ pub fn load_session_jsonl(path: &PathBuf) -> Session {
 
 #[async_trait]
 impl Middleware for CheckpointMiddleware {
-    async fn wrap_start(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let thread_id = agent
+    async fn wrap_start(&self, ctx: &mut Agent, next: Next<'_>) -> Result<(), AgentError> {
+        let thread_id = ctx
             .metadata
             .get("thread_id")
             .and_then(|v| v.as_str())
@@ -71,17 +71,17 @@ impl Middleware for CheckpointMiddleware {
             .to_string();
 
         let path = self.checkpoint_path(&thread_id);
-        if path.exists() && agent.session.as_ref().map(|s| s.messages.is_empty()).unwrap_or(true) {
+        if path.exists() && ctx.session.messages.is_empty() {
             let loaded = load_session_jsonl(&path);
-            if let Some(ref mut session) = agent.session {
-                session.messages = loaded.messages;
-            }
+            ctx.session.messages = loaded.messages;
         }
-        Ok(())
+        next.call(ctx).await
     }
 
-    async fn wrap_end(&self, agent: &mut Agent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let thread_id = agent
+    async fn wrap_end(&self, ctx: &mut Agent, next: Next<'_>) -> Result<(), AgentError> {
+        let result = next.call(ctx).await;
+
+        let thread_id = ctx
             .metadata
             .get("thread_id")
             .and_then(|v| v.as_str())
@@ -95,12 +95,11 @@ impl Middleware for CheckpointMiddleware {
 
         let file = JsonlFile::new(path);
         file.clear();
-        if let Some(ref session) = agent.session {
-            for msg in &session.messages {
-                file.append(&sanitize_for_persistence(msg));
-            }
+        for msg in &ctx.session.messages {
+            file.append(&sanitize_for_persistence(msg));
         }
-        Ok(())
+
+        result
     }
 }
 

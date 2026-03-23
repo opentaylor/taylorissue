@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
   Card,
   CardHeader,
@@ -41,6 +41,7 @@ import {
   CUSTOM_FIX_STEP_KEYS,
   useRepairStore,
 } from "@/stores/workflows/repair-store"
+import { ErrorDialog } from "@/components/error-dialog"
 import type { WorkflowStepStatus } from "@/types/workflow"
 
 const STEP_KEYS = [
@@ -141,6 +142,33 @@ export default function QuickFixPage() {
   useEffect(() => {
     void startScan()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [errorDialogInfo, setErrorDialogInfo] = useState<{ title: string; message: string; stepLabel?: string } | null>(null)
+
+  const fixErrorStep = steps.find((s) => s.fixError)
+  const customErrorStep = customFixSteps.find((s) => s.status === "error")
+
+  useEffect(() => {
+    if (fixErrorStep?.fixError) {
+      const label = t(`page.quickFix.steps.${fixErrorStep.id}.label`, { defaultValue: fixErrorStep.id })
+      setErrorDialogInfo({
+        title: t("page.quickFix.error.title"),
+        message: fixErrorStep.fixError,
+        stepLabel: t("page.quickFix.error.failedStep", { step: label }),
+      })
+    }
+  }, [fixErrorStep?.fixError]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (customFixError && customErrorStep?.error) {
+      const label = t(`page.quickFix.custom.steps.${customErrorStep.id}.label`, { defaultValue: customErrorStep.id })
+      setErrorDialogInfo({
+        title: t("page.quickFix.error.title"),
+        message: customErrorStep.error,
+        stepLabel: t("page.quickFix.error.failedStep", { step: label }),
+      })
+    }
+  }, [customFixError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const customFixHasStarted =
     isCustomFixing ||
@@ -397,6 +425,15 @@ export default function QuickFixPage() {
           )}
         </CardFooter>
       </Card>
+
+      <ErrorDialog
+        open={!!errorDialogInfo}
+        title={errorDialogInfo?.title ?? ""}
+        message={errorDialogInfo?.message ?? ""}
+        stepLabel={errorDialogInfo?.stepLabel}
+        closeLabel={t("page.quickFix.error.close")}
+        onClose={() => setErrorDialogInfo(null)}
+      />
     </div>
   )
 }

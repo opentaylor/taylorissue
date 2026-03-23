@@ -16,7 +16,7 @@ impl TiktokenCounter {
     }
 
     pub fn count_message(&self, message: &serde_json::Value) -> usize {
-        let mut tokens = 4; // <im_start>, role, \n, <im_end>
+        let mut tokens = 4;
         if let Some(content) = message.get("content").and_then(|v| v.as_str()) {
             tokens += self.count_text(content);
         }
@@ -39,7 +39,7 @@ impl TiktokenCounter {
     }
 
     pub fn count_messages(&self, messages: &[serde_json::Value]) -> usize {
-        let mut total = 3; // priming tokens
+        let mut total = 3;
         for msg in messages {
             total += self.count_message(msg);
         }

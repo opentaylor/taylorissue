@@ -42,6 +42,7 @@ import {
 import { SettingsIcon, ServerIcon, SlidersHorizontalIcon } from "lucide-react"
 import { useConfigStore } from "@/stores/config-store"
 import { useTheme } from "next-themes"
+import { getCurrentWindow, type Theme } from "@tauri-apps/api/window"
 
 const LANGUAGE_LABELS: Record<string, string> = {
   "zh-CN": "简体中文",
@@ -91,7 +92,12 @@ function GeneralSettings() {
         </Field>
         <Field>
           <FieldLabel htmlFor="theme">{t("settings.theme")}</FieldLabel>
-          <Select value={theme} onValueChange={(v) => { if (v) setTheme(v) }}>
+          <Select value={theme} onValueChange={(v) => {
+            if (!v) return
+            setTheme(v)
+            const tauriTheme: Theme | null = v === "system" ? null : (v as Theme)
+            getCurrentWindow().setTheme(tauriTheme)
+          }}>
             <SelectTrigger id="theme">
               <span data-slot="select-value" className="flex flex-1 text-left">
                 {themeLabels[theme ?? "system"]}

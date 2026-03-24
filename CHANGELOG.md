@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.3 - 2026-03-24
+
+### New Features
+
+- Added light and dark theme support with dynamic title bar theming
+- Improved user experience on Windows
+
 ## v0.1.2 - 2026-03-24
 
 ### New Features

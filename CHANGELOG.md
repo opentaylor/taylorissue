@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.2 - 2026-03-24
+
+### New Features
+
+- Added LLM provider selection (OpenAI / Anthropic) in overview and settings
+- Added codebase and issue-based repair for fixing problems in the official package itself
+
+### Improvements
+
+- Optimized repair prompts for faster and more thorough diagnostics
+- Removed unnecessary direct provider test from model request check — only the gateway matters
+- Doctor repair now only fixes errors, ignoring warnings
+- Prevented auto-configuration with placeholder API keys during repair
+- Added route guard to redirect users to set API key before accessing other pages
+- Improved Windows compatibility across all repair and install prompts
+
 ## v0.1.1 - 2026-03-23
 
 ### Bug Fixes

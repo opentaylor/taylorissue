@@ -92,9 +92,14 @@ impl AppConfig {
     }
 
     fn expand_tilde(&self, path: &str) -> String {
-        if path.starts_with("~/") {
+        if path.starts_with("~/") || path.starts_with("~\\") {
             if let Some(home) = dirs::home_dir() {
                 return home.join(&path[2..]).to_string_lossy().to_string();
+            }
+        }
+        if path == "~" {
+            if let Some(home) = dirs::home_dir() {
+                return home.to_string_lossy().to_string();
             }
         }
         path.to_string()

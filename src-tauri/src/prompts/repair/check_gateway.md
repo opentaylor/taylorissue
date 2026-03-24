@@ -1,14 +1,13 @@
 Check the OpenClaw gateway health. DO NOT fix anything.
 
-Step 1: Check if openclaw is installed.
-On macOS/Linux: test -x "{openclaw_bin}" && echo "installed" || echo "not installed"
-On Windows: if (Test-Path "{openclaw_bin}") { "installed" } else { "not installed" }
+Step 1:
+On macOS/Linux: "{openclaw_bin}" gateway status 2>&1
+On Windows: & "{openclaw_bin}" gateway status 2>&1
 
-Step 2: Check gateway and health status.
-  "{openclaw_bin}" gateway status 2>&1
-  "{openclaw_bin}" health 2>&1
-
-The gateway should be running on port {port}.
+How to interpret:
+- "RPC probe: ok" → RUNNING.
+- "RPC probe: failed" → STOPPED.
+- Ignore the "Runtime:" field — it may say "unknown" even when the gateway is running.
 
 Respond with ONLY this JSON:
 {"success": true, "status": "<running|stopped|not installed>", "port": <port or null>, "details": "<description>"}

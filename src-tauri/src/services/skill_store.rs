@@ -60,6 +60,18 @@ fn workspace_skills_dir() -> PathBuf {
         .join("skills")
 }
 
+fn extract_json_value(raw: &str) -> Value {
+    if let Ok(v) = serde_json::from_str(raw) {
+        return v;
+    }
+    if let Some(start) = raw.find('{') {
+        if let Ok(v) = serde_json::from_str(&raw[start..]) {
+            return v;
+        }
+    }
+    Value::Object(serde_json::Map::new())
+}
+
 fn run_cli(args: &[&str], openclaw_bin: &str) -> Value {
     let bin = if openclaw_bin.is_empty() {
         crate::services::setup_detection::detect_openclaw_bin_path()
@@ -74,14 +86,54 @@ fn run_cli(args: &[&str], openclaw_bin: &str) -> Value {
     let mut cmd = shell_env::build_command(&bin);
     cmd.args(&cli_args);
     shell_env::apply_env(&mut cmd);
+    cmd.stdin(std::process::Stdio::null());
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    log::info!("[skill_store] run_cli: {} {:?}", bin, cli_args);
+
     let result = cmd.output();
 
     match result {
-        Ok(output) if output.status.success() => {
+        Ok(output) => {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            serde_json::from_str(&stdout).unwrap_or(Value::Object(serde_json::Map::new()))
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            if !output.status.success() {
+                log::warn!(
+                    "[skill_store] CLI exited with {}: stderr={}",
+                    output.status,
+                    stderr.chars().take(500).collect::<String>()
+                );
+            }
+            let raw = if stdout.trim().is_empty() {
+                if !stderr.trim().is_empty() {
+                    log::info!("[skill_store] stdout empty, falling back to stderr");
+                }
+                &stderr
+            } else {
+                &stdout
+            };
+            if raw.trim().is_empty() {
+                log::warn!("[skill_store] CLI returned no output");
+                return Value::Object(serde_json::Map::new());
+            }
+            let value = extract_json_value(raw);
+            if value.as_object().map(|o| o.is_empty()).unwrap_or(false) {
+                log::warn!(
+                    "[skill_store] failed to parse JSON (first 300 chars): {}",
+                    raw.chars().take(300).collect::<String>()
+                );
+            }
+            value
         }
-        _ => Value::Object(serde_json::Map::new()),
+        Err(e) => {
+            log::error!("[skill_store] failed to spawn CLI '{}': {}", bin, e);
+            Value::Object(serde_json::Map::new())
+        }
     }
 }
 

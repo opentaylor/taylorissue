@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::Duration;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncRead};
 use tokio::process::Command;
 
 use super::base::{schema_for, BaseTool};
@@ -72,6 +72,14 @@ Usage notes:
 
 const PIPE_GRACE_PERIOD: Duration = Duration::from_secs(2);
 
+async fn read_pipe_lossy<R: AsyncRead + Unpin>(pipe: Option<R>) -> String {
+    let mut bytes = Vec::new();
+    if let Some(mut pipe) = pipe {
+        let _ = pipe.read_to_end(&mut bytes).await;
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
 #[async_trait]
 impl BaseTool for BashTool {
     fn name(&self) -> &str {
@@ -99,7 +107,9 @@ impl BaseTool for BashTool {
             {
                 const CREATE_NO_WINDOW: u32 = 0x08000000;
                 let wrapped = format!(
-                    "$ErrorActionPreference='Continue'; {}",
+                    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; \
+                     $OutputEncoding = [System.Text.Encoding]::UTF8; \
+                     $ErrorActionPreference='Continue'; {}",
                     args.command
                 );
                 let mut c = Command::new("powershell.exe");
@@ -131,21 +141,8 @@ impl BaseTool for BashTool {
         let stdout_pipe = child.stdout.take();
         let stderr_pipe = child.stderr.take();
 
-        let stdout_task = tokio::spawn(async move {
-            let mut buf = String::new();
-            if let Some(mut pipe) = stdout_pipe {
-                let _ = pipe.read_to_string(&mut buf).await;
-            }
-            buf
-        });
-
-        let stderr_task = tokio::spawn(async move {
-            let mut buf = String::new();
-            if let Some(mut pipe) = stderr_pipe {
-                let _ = pipe.read_to_string(&mut buf).await;
-            }
-            buf
-        });
+        let stdout_task = tokio::spawn(read_pipe_lossy(stdout_pipe));
+        let stderr_task = tokio::spawn(read_pipe_lossy(stderr_pipe));
 
         let wait_result = tokio::time::timeout(timeout, child.wait()).await;
 

@@ -7,6 +7,7 @@ use crate::kernel::llm::base::make_llm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::prompts::render;
+use crate::services::setup_detection;
 use crate::services::shell_env;
 use crate::services::step_runner::run_step_dynamic;
 
@@ -97,7 +98,7 @@ fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
     details
 }
 
-fn build_fix_guidance(step_id: &str, openclaw_bin: &str) -> String {
+fn build_fix_guidance(step_id: &str, openclaw_bin: &str, port: &str) -> String {
     let template = match step_id {
         "checkGateway" => include_str!("../prompts/repair/fix_check_gateway.md"),
         "checkConfig" => include_str!("../prompts/repair/fix_check_config.md"),
@@ -105,7 +106,7 @@ fn build_fix_guidance(step_id: &str, openclaw_bin: &str) -> String {
         "runDoctor" => include_str!("../prompts/repair/fix_run_doctor.md"),
         _ => "",
     };
-    render(template, &[("openclaw_bin", openclaw_bin)])
+    render(template, &[("openclaw_bin", openclaw_bin), ("port", port)])
 }
 
 fn build_system_prompt(base: &str, openclaw_bin: &str) -> String {
@@ -141,7 +142,7 @@ fn has_issue(step_id: &str, parsed: &Value) -> bool {
 }
 
 pub async fn run_repair(
-    config: AppConfig,
+    mut config: AppConfig,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     shell_env::refresh_path();
@@ -164,6 +165,9 @@ pub async fn run_repair(
     let config_prompt = build_check_config_prompt(&config);
     run_step_dynamic(&mut agent, &mut session, "checkConfig", &config_prompt, &channel, 16, Some(build_details), Some(has_issue)).await;
 
+    if let Some(fresh_token) = setup_detection::detect_gateway_token() {
+        config.gateway_token = fresh_token;
+    }
     let model_prompt = build_check_model_request_prompt(&config);
     run_step_dynamic(&mut agent, &mut session, "checkModelRequest", &model_prompt, &channel, 16, Some(build_details), Some(has_issue)).await;
 
@@ -192,7 +196,7 @@ pub async fn run_fix(
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("fix"))];
 
-    let guidance = build_fix_guidance(step_id, &config.openclaw_bin);
+    let guidance = build_fix_guidance(step_id, &config.openclaw_bin, &config.gateway_port.to_string());
     let prompt = render(FIX_TEMPLATE, &[
         ("step_id", step_id),
         ("issue_description", issue_description),

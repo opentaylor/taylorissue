@@ -1,11 +1,15 @@
 Stop and uninstall the OpenClaw gateway service.
 
-Step 1: Stop and uninstall via CLI (skip gracefully if not installed).
+Step 1: Stop and uninstall via CLI (skip gracefully if errors).
+On macOS/Linux:
   "{openclaw_bin}" gateway stop 2>/dev/null || true
   "{openclaw_bin}" gateway uninstall 2>/dev/null || true
+On Windows:
+  try { & "{openclaw_bin}" gateway stop } catch {}
+  try { & "{openclaw_bin}" gateway uninstall } catch {}
 
 Step 2: If the CLI is not installed, check for leftover service files.
-On macOS:
+On macOS/Linux:
   ls ~/Library/LaunchAgents/ai.openclaw.gateway.plist 2>/dev/null && rm -f ~/Library/LaunchAgents/ai.openclaw.gateway.plist
 On Linux:
   systemctl --user stop openclaw-gateway 2>/dev/null; rm -f ~/.config/systemd/user/openclaw-gateway.service && systemctl --user daemon-reload 2>/dev/null

@@ -11,15 +11,32 @@ use crate::kernel::tool::bash::BashTool;
 use crate::prompts::render;
 use crate::services::setup_detection;
 use crate::services::shell_env;
-use crate::services::step_runner::{run_step, run_step_dynamic, StepDef};
+use crate::services::step_runner::run_step_dynamic;
 use std::process::Stdio;
 
 pub const SYSTEM_PROMPT: &str = include_str!("../prompts/install/system.md");
 
-pub static STEP_DETECT_ENV: StepDef = StepDef {
-    id: "detectEnv",
-    prompt: include_str!("../prompts/install/detect_env.md"),
-};
+pub const DETECT_ENV_TEMPLATE: &str = include_str!("../prompts/install/detect_env.md");
+
+pub fn build_detect_env_prompt() -> String {
+    #[cfg(windows)]
+    let (tool_name, detect_command) = (
+        "powershell",
+        "$o = Get-CimInstance Win32_OperatingSystem; $d = Get-PsDrive C; \
+         Write-Output (\"OS=\" + $o.Caption.Trim() + \" \" + $o.Version); \
+         Write-Output (\"ARCH=\" + $env:PROCESSOR_ARCHITECTURE); \
+         Write-Output (\"DISK_GB=\" + [math]::Round($d.Free / 1GB, 2))",
+    );
+    #[cfg(not(windows))]
+    let (tool_name, detect_command) = (
+        "bash",
+        "uname -s && uname -r && uname -m && df -h / && (sw_vers 2>/dev/null || true)",
+    );
+    render(DETECT_ENV_TEMPLATE, &[
+        ("tool_name", tool_name),
+        ("detect_command", detect_command),
+    ])
+}
 
 pub const SCRIPT_TEMPLATE: &str = include_str!("../prompts/install/script.md");
 pub const CONFIGURE_TEMPLATE: &str = include_str!("../prompts/install/configure.md");
@@ -213,7 +230,7 @@ fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
 
 pub async fn run_install(
     app: AppHandle,
-    config: AppConfig,
+    mut config: AppConfig,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let scripts = resolve_scripts(&app);
@@ -241,10 +258,8 @@ pub async fn run_install(
         };
     }
 
-    if !run_step(&mut agent, &mut session, &STEP_DETECT_ENV, &channel, 16, Some(build_details), None).await {
-        let _ = channel.send(serde_json::json!({"event": "done", "data": {}}));
-        return Ok(());
-    }
+    let detect_env_prompt = build_detect_env_prompt();
+    step!("detectEnv", detect_env_prompt);
 
     shell_env::refresh_path();
 
@@ -323,6 +338,11 @@ pub async fn run_install(
         .unwrap_or_else(|| "openclaw".to_string());
 
     step!("configure", build_configure_prompt(&config, &openclaw_bin));
+
+    if let Some(fresh_token) = setup_detection::detect_gateway_token() {
+        config.gateway_token = fresh_token;
+    }
+
     step!("startGateway", build_start_gateway_prompt(&config, &openclaw_bin));
     step!("verify", build_verify_prompt(&config, &openclaw_bin));
 

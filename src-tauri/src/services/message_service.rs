@@ -145,7 +145,8 @@ pub async fn stream_chat(
     let workspace = config.resolve_workspace_path();
     let agent = get_agent(agent_id, config).ok_or_else(|| MessageError::NotFound(agent_id.to_string()))?;
 
-    let gateway_token = &config.gateway_token;
+    let gateway_token = setup_detection::detect_gateway_token()
+        .unwrap_or_else(|| config.gateway_token.clone());
     let gateway_url = config.gateway_url();
 
     let soul: Option<String> = agent.soul_path.as_ref().and_then(|sp| {
@@ -287,7 +288,7 @@ pub async fn stream_chat(
                     }
                 }
                 if !got_error {
-                    if let Some(err) = probe_gateway_error(&client, &url, gateway_token, &model).await {
+                    if let Some(err) = probe_gateway_error(&client, &url, &gateway_token, &model).await {
                         let _ = channel.send(serde_json::json!({"error": err}));
                     } else {
                         let _ = channel.send(serde_json::json!({"error": "No response received from the model. Check your API key and quota."}));

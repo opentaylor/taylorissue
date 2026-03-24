@@ -17,6 +17,7 @@ On Windows: (Get-ChildItem -Recurse "$openclawDir\dist\control-ui" -File -EA Sil
 
 Step 5: Check if dist/control-ui/assets/ directory exists and has JS/CSS files.
 On macOS/Linux: ls "$OPENCLAW_DIR/dist/control-ui/assets/"*.js 2>/dev/null | head -3 && echo "assets_ok=true" || echo "assets_ok=false"
+On Windows: if ((Get-ChildItem "$openclawDir\dist\control-ui\assets\*.js" -EA SilentlyContinue).Count -gt 0) { "assets_ok=true" } else { "assets_ok=false" }
 
 Respond with ONLY this JSON:
 {"success": true, "version": "<installed version>", "control_ui_present": <true if dist/control-ui/index.html exists>, "asset_count": <number of files in dist/control-ui/>, "assets_ok": <true if assets/ has JS/CSS files>, "details": "<description of what was found>"}

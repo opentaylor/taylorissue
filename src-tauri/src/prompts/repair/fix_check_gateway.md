@@ -1,5 +1,12 @@
-Fix strategy: the gateway is not running. Enable the HTTP endpoint and start it as a persistent service.
-  "{openclaw_bin}" config set "gateway.http.endpoints.chatCompletions.enabled" true --strict-json
-  "{openclaw_bin}" gateway install --force
-  "{openclaw_bin}" gateway start
-Then wait 5 seconds and verify with: "{openclaw_bin}" gateway status
+Fix strategy: the gateway is not running. Do ALL of these steps in order:
+1. Enable the HTTP endpoint:
+   "{openclaw_bin}" config set "gateway.http.endpoints.chatCompletions.enabled" true --strict-json
+2. Reinstall and start the gateway:
+   "{openclaw_bin}" gateway install --force
+   "{openclaw_bin}" gateway start
+3. Wait 8 seconds for the gateway to fully initialize:
+   On macOS/Linux: sleep 8
+   On Windows: Start-Sleep -Seconds 8
+4. Verify the gateway is running:
+   "{openclaw_bin}" gateway status
+Do NOT skip the wait step. Do NOT run any other config set commands.

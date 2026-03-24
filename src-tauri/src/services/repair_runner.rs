@@ -40,16 +40,7 @@ pub fn build_check_config_prompt(config: &AppConfig) -> String {
 }
 
 pub fn build_check_model_request_prompt(config: &AppConfig) -> String {
-    let base = config.base_url.trim_end_matches('/');
-    let completions_url = if base.ends_with("/v1") {
-        format!("{}/chat/completions", base)
-    } else {
-        format!("{}/v1/chat/completions", base)
-    };
-
     render(CHECK_MODEL_REQUEST_TEMPLATE, &[
-        ("completions_url", &completions_url),
-        ("api_key", &config.api_key),
         ("model", &config.model),
         ("port", &config.gateway_port.to_string()),
         ("gateway_token", &config.gateway_token),
@@ -80,9 +71,6 @@ fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
             }
         }
         "checkModelRequest" => {
-            if let Some(v) = parsed.get("http_status").and_then(|v| v.as_u64()) {
-                details.push(format!("Provider: HTTP {}", v));
-            }
             if let Some(v) = parsed.get("gateway_status").and_then(|v| v.as_str()) {
                 details.push(format!("Gateway: {}", v));
             }
@@ -137,17 +125,12 @@ fn has_issue(step_id: &str, parsed: &Value) -> bool {
                 || parsed.get("valid_json").and_then(|v| v.as_bool()) == Some(false)
         }
         "checkModelRequest" => {
-            let provider_ok = parsed
-                .get("http_status")
-                .and_then(|v| v.as_u64())
-                .map(|s| s == 200)
-                .unwrap_or(false);
             let gateway_ok = parsed
                 .get("gateway_status")
                 .and_then(|v| v.as_str())
                 .map(|s| s == "ok")
                 .unwrap_or(true);
-            !provider_ok || !gateway_ok
+            !gateway_ok
         }
         "runDoctor" => {
             let errors = parsed.get("errors").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);

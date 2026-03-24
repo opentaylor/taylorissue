@@ -2,8 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::services::setup_detection;
 
+fn default_provider() -> String {
+    "openai".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    #[serde(default = "default_provider")]
+    pub provider: String,
     pub base_url: String,
     pub api_key: String,
     pub model: String,
@@ -14,6 +20,8 @@ pub struct AppConfig {
     pub gateway_port: u16,
     #[serde(default)]
     pub openclaw_bin: String,
+    #[serde(default)]
+    pub openclaw_install_type: String,
 }
 
 impl AppConfig {
@@ -29,17 +37,20 @@ impl AppConfig {
                 .unwrap_or(18789);
         }
         if self.openclaw_bin.is_empty() {
-            self.openclaw_bin = setup_detection::detect_openclaw_bin()
-                .unwrap_or_default();
+            if let Some(resolved) = setup_detection::detect_openclaw_bin() {
+                self.openclaw_bin = resolved.bin_path;
+                self.openclaw_install_type = resolved.install_type.as_str().to_string();
+            }
         }
 
         log::info!(
-            "[AppConfig::resolved] workspace={} gateway={}:{} token_len={} bin={}",
+            "[AppConfig::resolved] workspace={} gateway={}:{} token_len={} bin={} type={}",
             self.workspace_path,
             self.gateway_url(),
             self.gateway_port,
             self.gateway_token.len(),
             self.openclaw_bin,
+            self.openclaw_install_type,
         );
 
         self

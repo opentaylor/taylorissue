@@ -3,37 +3,26 @@ use tauri::ipc::Channel;
 
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
-use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::llm::base::make_llm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
-use crate::services::step_runner::{run_step, StepDef};
+use crate::prompts::render;
+use crate::services::step_runner::run_step_dynamic;
 
 pub const SYSTEM_PROMPT: &str = include_str!("../prompts/uninstall/system.md");
 
-pub static ALL_STEPS: &[StepDef] = &[
-    StepDef {
-        id: "stopServices",
-        prompt: include_str!("../prompts/uninstall/stop_services.md"),
-    },
-    StepDef {
-        id: "removePackage",
-        prompt: include_str!("../prompts/uninstall/remove_package.md"),
-    },
-    StepDef {
-        id: "deleteWorkspace",
-        prompt: include_str!("../prompts/uninstall/delete_workspace.md"),
-    },
-    StepDef {
-        id: "deleteConfig",
-        prompt: include_str!("../prompts/uninstall/delete_config.md"),
-    },
-    StepDef {
-        id: "deleteData",
-        prompt: include_str!("../prompts/uninstall/delete_data.md"),
-    },
-];
+pub const STOP_SERVICES_TEMPLATE: &str = include_str!("../prompts/uninstall/stop_services.md");
+pub const REMOVE_PACKAGE_TEMPLATE: &str = include_str!("../prompts/uninstall/remove_package.md");
+pub const DELETE_WORKSPACE_TEMPLATE: &str = include_str!("../prompts/uninstall/delete_workspace.md");
+pub const DELETE_CONFIG_TEMPLATE: &str = include_str!("../prompts/uninstall/delete_config.md");
+pub const DELETE_DATA_TEMPLATE: &str = include_str!("../prompts/uninstall/delete_data.md");
 
-fn build_uninstall_details(step_id: &str, parsed: &Value) -> Vec<String> {
+struct DynStep {
+    id: &'static str,
+    template: &'static str,
+}
+
+fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
     let mut details = Vec::new();
     match step_id {
         "stopServices" => {
@@ -81,10 +70,10 @@ pub async fn run_uninstall(
     selected_options: Vec<String>,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
+    let llm = make_llm(&config.provider, &config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "UninstallRunner".to_string();
-    agent.llm = Some(Box::new(llm));
+    agent.llm = Some(llm);
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("uninstall"))];
 
@@ -92,13 +81,31 @@ pub async fn run_uninstall(
         "role": "system", "content": SYSTEM_PROMPT
     })]);
 
-    let steps: Vec<&StepDef> = ALL_STEPS
+    let openclaw_bin = &config.openclaw_bin;
+    let install_type = &config.openclaw_install_type;
+
+    let all_steps = [
+        DynStep { id: "stopServices", template: STOP_SERVICES_TEMPLATE },
+        DynStep { id: "removePackage", template: REMOVE_PACKAGE_TEMPLATE },
+        DynStep { id: "deleteWorkspace", template: DELETE_WORKSPACE_TEMPLATE },
+        DynStep { id: "deleteConfig", template: DELETE_CONFIG_TEMPLATE },
+        DynStep { id: "deleteData", template: DELETE_DATA_TEMPLATE },
+    ];
+
+    let steps: Vec<&DynStep> = all_steps
         .iter()
         .filter(|s| selected_options.iter().any(|o| o == s.id))
         .collect();
 
     for step in steps {
-        let ok = run_step(&mut agent, &mut session, step, &channel, 16, Some(build_uninstall_details), None).await;
+        let prompt = render(step.template, &[
+            ("openclaw_bin", openclaw_bin),
+            ("install_type", install_type),
+        ]);
+        let ok = run_step_dynamic(
+            &mut agent, &mut session, step.id, &prompt,
+            &channel, 16, Some(build_details), None,
+        ).await;
         if !ok { break; }
     }
 

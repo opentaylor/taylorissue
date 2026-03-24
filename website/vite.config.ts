@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => ({
-  base: mode === "production" ? "/taylorissue/" : "/",
+  base: "/",
   plugins: [react(), tailwindcss()],
   css: {
     transformer: "lightningcss",

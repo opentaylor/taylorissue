@@ -1,8 +1,8 @@
 Stop and uninstall the OpenClaw gateway service.
 
 Step 1: Stop and uninstall via CLI (skip gracefully if not installed).
-  openclaw gateway stop 2>/dev/null || true
-  openclaw gateway uninstall 2>/dev/null || true
+  "{openclaw_bin}" gateway stop 2>/dev/null || true
+  "{openclaw_bin}" gateway uninstall 2>/dev/null || true
 
 Step 2: If the CLI is not installed, check for leftover service files.
 On macOS:

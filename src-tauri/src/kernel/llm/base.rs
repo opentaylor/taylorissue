@@ -36,8 +36,11 @@ impl LlmConfig {
     }
 }
 
-pub fn make_llm(base_url: &str, api_key: &str, model: &str) -> super::OpenAiLlm {
-    super::OpenAiLlm::new(api_key, base_url, model)
+pub fn make_llm(provider: &str, api_key: &str, base_url: &str, model: &str) -> Box<dyn BaseLlm> {
+    match provider {
+        "anthropic" => Box::new(super::AnthropicLlm::new(api_key, base_url, model)),
+        _ => Box::new(super::OpenAiLlm::new(api_key, base_url, model)),
+    }
 }
 
 #[cfg(test)]

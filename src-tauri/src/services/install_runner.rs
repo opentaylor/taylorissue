@@ -5,12 +5,14 @@ use tauri::{AppHandle, Manager};
 
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
-use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::llm::base::make_llm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::prompts::render;
+use crate::services::setup_detection;
 use crate::services::shell_env;
 use crate::services::step_runner::{run_step, run_step_dynamic, StepDef};
+use std::process::Stdio;
 
 pub const SYSTEM_PROMPT: &str = include_str!("../prompts/install/system.md");
 
@@ -33,24 +35,27 @@ pub fn build_script_prompt(script_path: &str, label: &str, verify_cmd: &str, jso
     ])
 }
 
-pub fn build_configure_prompt(config: &AppConfig) -> String {
+pub fn build_configure_prompt(config: &AppConfig, openclaw_bin: &str) -> String {
     render(CONFIGURE_TEMPLATE, &[
         ("base_url", &config.base_url),
         ("model", &config.model),
         ("api_key", &config.api_key),
         ("port", &config.gateway_port.to_string()),
+        ("openclaw_bin", openclaw_bin),
     ])
 }
 
-pub fn build_start_gateway_prompt(config: &AppConfig) -> String {
+pub fn build_start_gateway_prompt(config: &AppConfig, openclaw_bin: &str) -> String {
     render(START_GATEWAY_TEMPLATE, &[
         ("port", &config.gateway_port.to_string()),
+        ("openclaw_bin", openclaw_bin),
     ])
 }
 
-pub fn build_verify_prompt(config: &AppConfig) -> String {
+pub fn build_verify_prompt(config: &AppConfig, openclaw_bin: &str) -> String {
     render(VERIFY_TEMPLATE, &[
         ("port", &config.gateway_port.to_string()),
+        ("openclaw_bin", openclaw_bin),
     ])
 }
 
@@ -140,6 +145,38 @@ fn resolve_scripts(app: &AppHandle) -> ResolvedScripts {
     scripts
 }
 
+fn run_version(bin_path: &str) -> Option<String> {
+    let mut cmd = shell_env::build_command(bin_path);
+    cmd.arg("--version");
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    shell_env::apply_env(&mut cmd);
+    let output = cmd.output().ok().filter(|o| o.status.success())?;
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .next()
+        .map(|l| l.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+fn detect_in_path(name: &str) -> Option<(String, String)> {
+    let enriched = shell_env::full_path();
+    let path = which::which_in(name, Some(&enriched), ".").ok()?;
+    let path_str = path.to_string_lossy().to_string();
+    let version = run_version(&path_str)?;
+    Some((path_str, version))
+}
+
+fn emit_step(channel: &Channel<Value>, step_id: &str, details: Vec<String>) {
+    let _ = channel.send(serde_json::json!({
+        "event": "step",
+        "data": {"step_id": step_id, "status": "active"}
+    }));
+    let _ = channel.send(serde_json::json!({
+        "event": "step",
+        "data": {"step_id": step_id, "status": "complete", "details": details}
+    }));
+}
+
 fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
     let mut details = Vec::new();
     match step_id {
@@ -181,10 +218,10 @@ pub async fn run_install(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let scripts = resolve_scripts(&app);
 
-    let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
+    let llm = make_llm(&config.provider, &config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "InstallRunner".to_string();
-    agent.llm = Some(Box::new(llm));
+    agent.llm = Some(llm);
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("install"))];
 
@@ -209,35 +246,85 @@ pub async fn run_install(
         return Ok(());
     }
 
-    let git_prompt = build_script_prompt(
-        &scripts.git,
-        "Install Git using the bundled script.",
-        "git --version",
-        "{\"success\": true, \"version\": \"<git version>\"}",
-    );
-    step!("installGit", git_prompt);
-
-    let node_prompt = build_script_prompt(
-        &scripts.node,
-        "Install Node.js using the bundled script.",
-        "node --version; npm --version",
-        "{\"success\": true, \"version\": \"<node version>\"}",
-    );
-    step!("installNode", node_prompt);
-
-    let openclaw_prompt = build_script_prompt(
-        &scripts.openclaw,
-        "Install OpenClaw using the bundled script.",
-        "openclaw --version",
-        "{\"success\": true, \"version\": \"<openclaw version>\"}",
-    );
-    step!("installOpenClaw", openclaw_prompt);
-
     shell_env::refresh_path();
 
-    step!("configure", build_configure_prompt(&config));
-    step!("startGateway", build_start_gateway_prompt(&config));
-    step!("verify", build_verify_prompt(&config));
+    let openclaw_resolved = setup_detection::detect_openclaw_bin();
+    let openclaw_version = openclaw_resolved.as_ref().and_then(|r| run_version(&r.bin_path));
+    let openclaw_runnable = openclaw_resolved.is_some() && openclaw_version.is_some();
+
+    emit_step(&channel, "checkOpenClaw", match (&openclaw_resolved, &openclaw_version) {
+        (Some(r), Some(ver)) => vec![
+            format!("Found: {}", ver),
+            r.bin_path.clone(),
+            format!("Type: {}", r.install_type.as_str()),
+        ],
+        (Some(r), None) => vec![
+            format!("Found at {} but cannot run", r.bin_path),
+        ],
+        _ => vec!["Not installed".to_string()],
+    });
+
+    let git_info = detect_in_path("git");
+    if let Some((ref path, ref version)) = git_info {
+        log::info!("[install] git detected: {} at {}", version, path);
+        emit_step(&channel, "installGit", vec![
+            format!("Detected: {}", version),
+            path.clone(),
+        ]);
+    } else {
+        let git_prompt = build_script_prompt(
+            &scripts.git,
+            "Install Git using the bundled script.",
+            "git --version",
+            "{\"success\": true, \"version\": \"<git version>\"}",
+        );
+        step!("installGit", git_prompt);
+        shell_env::refresh_path();
+    }
+
+    let node_info = detect_in_path("node");
+    if let Some((ref path, ref version)) = node_info {
+        log::info!("[install] node detected: {} at {}", version, path);
+        emit_step(&channel, "installNode", vec![
+            format!("Detected: {}", version),
+            path.clone(),
+        ]);
+    } else {
+        let node_prompt = build_script_prompt(
+            &scripts.node,
+            "Install Node.js using the bundled script.",
+            "node --version; npm --version",
+            "{\"success\": true, \"version\": \"<node version>\"}",
+        );
+        step!("installNode", node_prompt);
+        shell_env::refresh_path();
+    }
+
+    if openclaw_runnable {
+        let r = openclaw_resolved.as_ref().unwrap();
+        let ver = openclaw_version.as_ref().unwrap();
+        log::info!("[install] openclaw detected: {} at {}", ver, r.bin_path);
+        emit_step(&channel, "installOpenClaw", vec![
+            format!("Detected: {}", ver),
+            r.bin_path.clone(),
+        ]);
+    } else {
+        let openclaw_prompt = build_script_prompt(
+            &scripts.openclaw,
+            "Install OpenClaw using the bundled script.",
+            "openclaw --version",
+            "{\"success\": true, \"version\": \"<openclaw version>\"}",
+        );
+        step!("installOpenClaw", openclaw_prompt);
+        shell_env::refresh_path();
+    }
+
+    let openclaw_bin = setup_detection::detect_openclaw_bin_path()
+        .unwrap_or_else(|| "openclaw".to_string());
+
+    step!("configure", build_configure_prompt(&config, &openclaw_bin));
+    step!("startGateway", build_start_gateway_prompt(&config, &openclaw_bin));
+    step!("verify", build_verify_prompt(&config, &openclaw_bin));
 
     let _ = channel.send(serde_json::json!({"event": "done", "data": {}}));
     Ok(())

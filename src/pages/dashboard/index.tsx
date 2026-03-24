@@ -15,6 +15,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { FreeApiHelpDialog } from "@/components/free-api-help-dialog"
 import { useConfigStore } from "@/stores/config-store"
@@ -76,6 +82,13 @@ export default function DashboardHome() {
   const { t } = useTranslation()
   const { modelConfig, setModelConfig } = useConfigStore()
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false)
+  const apiKeyRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!modelConfig.apiKey) {
+      apiKeyRef.current?.focus()
+    }
+  }, [modelConfig.apiKey])
 
   const maintainers = [
     t("page.dashboard.meta.maintainers.items.zhang"),
@@ -112,6 +125,33 @@ export default function DashboardHome() {
           <CardContent>
             <FieldGroup>
               <Field>
+                <FieldLabel htmlFor="dashboard-provider">
+                  {t("page.dashboard.config.providerLabel")}
+                </FieldLabel>
+                <Select
+                  value={modelConfig.provider}
+                  onValueChange={(v) => {
+                    if (v === "openai" || v === "anthropic") {
+                      setModelConfig({ provider: v })
+                    }
+                  }}
+                >
+                  <SelectTrigger id="dashboard-provider">
+                    <span data-slot="select-value" className="flex flex-1 text-left">
+                      {modelConfig.provider === "anthropic" ? "Anthropic" : "OpenAI"}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="openai">OpenAI</SelectItem>
+                    <SelectItem value="anthropic">Anthropic</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  {t("page.dashboard.config.providerDescription")}
+                </FieldDescription>
+              </Field>
+
+              <Field>
                 <FieldLabel htmlFor="dashboard-api-base">
                   {t("page.dashboard.config.apiBaseLabel")}
                 </FieldLabel>
@@ -131,6 +171,7 @@ export default function DashboardHome() {
                   {t("page.dashboard.config.apiKeyLabel")}
                 </FieldLabel>
                 <Input
+                  ref={apiKeyRef}
                   id="dashboard-api-key"
                   type="password"
                   placeholder="sk-..."

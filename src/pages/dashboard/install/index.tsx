@@ -34,12 +34,14 @@ import {
   GitBranchIcon,
   HexagonIcon,
   PowerIcon,
+  SearchIcon,
 } from "lucide-react"
 import { useInstallStore } from "@/stores/workflows/install-store"
 import type { WorkflowStepStatus } from "@/types/workflow"
 
 const STEP_KEYS = [
   "detectEnv",
+  "checkOpenClaw",
   "installGit",
   "installNode",
   "installOpenClaw",
@@ -52,6 +54,7 @@ type StepKey = (typeof STEP_KEYS)[number]
 
 const STEP_ICONS: Record<StepKey, typeof MonitorIcon> = {
   detectEnv: MonitorIcon,
+  checkOpenClaw: SearchIcon,
   installGit: GitBranchIcon,
   installNode: HexagonIcon,
   installOpenClaw: DownloadIcon,

@@ -34,6 +34,8 @@
       "config": {
         "title": "Quick Model Setup",
         "description": "Give your OpenClaw a brain.",
+        "providerLabel": "Provider",
+        "providerDescription": "Select the LLM provider type (OpenAI-compatible or Anthropic).",
         "apiBaseLabel": "API URL",
         "apiBaseDescription": "The API endpoint for the model service.",
         "apiKeyLabel": "API Key",
@@ -96,6 +98,11 @@
           "label": "Detect system environment",
           "active": "Scanning OS, architecture, and installed software…",
           "complete": "System environment detected"
+        },
+        "checkOpenClaw": {
+          "label": "Detect OpenClaw",
+          "active": "Checking for existing OpenClaw installation…",
+          "complete": "OpenClaw detection complete"
         },
         "installGit": {
           "label": "Install Git",
@@ -409,6 +416,8 @@
     "themeSystem": "System",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "provider": "Provider",
+    "providerDescription": "Select the LLM provider type (OpenAI-compatible or Anthropic).",
     "apiUrl": "API URL",
     "apiUrlDescription": "The API endpoint for the model service.",
     "apiKey": "API Key",

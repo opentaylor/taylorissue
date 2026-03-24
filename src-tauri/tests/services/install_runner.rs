@@ -3,8 +3,6 @@ use taylor_issue_lib::services::step_runner::run_step_standalone;
 
 use crate::common::*;
 
-// ---- detectEnv ----
-
 #[tokio::test]
 #[ignore]
 async fn test_detect_env() {
@@ -23,8 +21,6 @@ async fn test_detect_env() {
     assert_has_key(&result, "disk_free");
     println!("[detectEnv] {result:#}");
 }
-
-// ---- installGit ----
 
 #[tokio::test]
 #[ignore]
@@ -47,8 +43,6 @@ async fn test_install_git() {
     println!("[installGit] {result:#}");
 }
 
-// ---- installNode ----
-
 #[tokio::test]
 #[ignore]
 async fn test_install_node() {
@@ -70,8 +64,6 @@ async fn test_install_node() {
     println!("[installNode] {result:#}");
 }
 
-// ---- configure ----
-
 #[tokio::test]
 #[ignore]
 async fn test_configure() {
@@ -80,7 +72,7 @@ async fn test_configure() {
     let mut session = make_session(SYSTEM_PROMPT);
 
     let config = make_config(&api_key, &base_url, &model);
-    let prompt = build_configure_prompt(&config);
+    let prompt = build_configure_prompt(&config, "openclaw");
 
     let result = run_step_standalone(
         &mut agent, &mut session, "configure", &prompt, 16,
@@ -90,8 +82,6 @@ async fn test_configure() {
     println!("[configure] {result:#}");
 }
 
-// ---- verify ----
-
 #[tokio::test]
 #[ignore]
 async fn test_verify() {
@@ -100,7 +90,7 @@ async fn test_verify() {
     let mut session = make_session(SYSTEM_PROMPT);
 
     let config = make_config(&api_key, &base_url, &model);
-    let prompt = build_verify_prompt(&config);
+    let prompt = build_verify_prompt(&config, "openclaw");
 
     let result = run_step_standalone(
         &mut agent, &mut session, "verify", &prompt, 16,

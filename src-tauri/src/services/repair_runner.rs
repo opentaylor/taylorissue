@@ -3,12 +3,12 @@ use tauri::ipc::Channel;
 
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
-use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::llm::base::make_llm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::prompts::render;
 use crate::services::shell_env;
-use crate::services::step_runner::{run_step_dynamic, StepDef};
+use crate::services::step_runner::run_step_dynamic;
 
 pub const SYSTEM_PROMPT: &str = include_str!("../prompts/repair/system.md");
 pub const FIX_SYSTEM_PROMPT: &str = include_str!("../prompts/repair/fix_system.md");
@@ -17,20 +17,17 @@ const KNOWLEDGE_BASE: &str = include_str!("../prompts/repair/knowledge_base.md")
 pub const CHECK_GATEWAY_TEMPLATE: &str = include_str!("../prompts/repair/check_gateway.md");
 pub const CHECK_CONFIG_TEMPLATE: &str = include_str!("../prompts/repair/check_config.md");
 pub const CHECK_MODEL_REQUEST_TEMPLATE: &str = include_str!("../prompts/repair/check_model_request.md");
+pub const RUN_DOCTOR_TEMPLATE: &str = include_str!("../prompts/repair/run_doctor.md");
 pub const FIX_TEMPLATE: &str = include_str!("../prompts/repair/fix.md");
 pub const CUSTOM_FIX_ANALYZE_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_analyze.md");
 pub const CUSTOM_FIX_DIAGNOSE_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_diagnose.md");
 pub const CUSTOM_FIX_FIX_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_fix.md");
 pub const CUSTOM_FIX_VERIFY_TEMPLATE: &str = include_str!("../prompts/repair/custom_fix_verify.md");
 
-pub static STEP_RUN_DOCTOR: StepDef = StepDef {
-    id: "runDoctor",
-    prompt: include_str!("../prompts/repair/run_doctor.md"),
-};
-
 pub fn build_check_gateway_prompt(config: &AppConfig) -> String {
     render(CHECK_GATEWAY_TEMPLATE, &[
         ("port", &config.gateway_port.to_string()),
+        ("openclaw_bin", &config.openclaw_bin),
     ])
 }
 
@@ -59,7 +56,13 @@ pub fn build_check_model_request_prompt(config: &AppConfig) -> String {
     ])
 }
 
-fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
+pub fn build_run_doctor_prompt(config: &AppConfig) -> String {
+    render(RUN_DOCTOR_TEMPLATE, &[
+        ("openclaw_bin", &config.openclaw_bin),
+    ])
+}
+
+fn build_details(step_id: &str, parsed: &Value) -> Vec<String> {
     let mut details = Vec::new();
     match step_id {
         "checkGateway" => {
@@ -90,13 +93,13 @@ fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
             }
         }
         "runDoctor" => {
+            let errors = parsed.get("errors").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
             let warnings = parsed.get("warnings").and_then(|v| v.as_u64()).unwrap_or(0);
-            let issues = parsed.get("issues").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
-            if warnings == 0 && issues == 0 {
+            if errors == 0 && warnings == 0 {
                 details.push("No issues".to_string());
             } else {
-                if warnings > 0 { details.push(format!("{} warnings", warnings)); }
-                if issues > 0 { details.push(format!("{} issues", issues)); }
+                if errors > 0 { details.push(format!("{} errors", errors)); }
+                if warnings > 0 { details.push(format!("{} warnings (ignored)", warnings)); }
             }
         }
         _ => {}
@@ -106,18 +109,20 @@ fn build_repair_details(step_id: &str, parsed: &Value) -> Vec<String> {
     details
 }
 
-fn build_fix_guidance(step_id: &str) -> &'static str {
-    match step_id {
-        "checkGateway" => include_str!("../prompts/repair/fix_checkGateway.md"),
-        "checkConfig" => include_str!("../prompts/repair/fix_checkConfig.md"),
-        "checkModelRequest" => include_str!("../prompts/repair/fix_checkModelRequest.md"),
-        "runDoctor" => include_str!("../prompts/repair/fix_runDoctor.md"),
+fn build_fix_guidance(step_id: &str, openclaw_bin: &str) -> String {
+    let template = match step_id {
+        "checkGateway" => include_str!("../prompts/repair/fix_check_gateway.md"),
+        "checkConfig" => include_str!("../prompts/repair/fix_check_config.md"),
+        "checkModelRequest" => include_str!("../prompts/repair/fix_check_model_request.md"),
+        "runDoctor" => include_str!("../prompts/repair/fix_run_doctor.md"),
         _ => "",
-    }
+    };
+    render(template, &[("openclaw_bin", openclaw_bin)])
 }
 
-fn build_system_prompt(base: &str) -> String {
-    format!("{base}{KNOWLEDGE_BASE}")
+fn build_system_prompt(base: &str, openclaw_bin: &str) -> String {
+    let rendered = render(base, &[("openclaw_bin", openclaw_bin)]);
+    format!("{rendered}{KNOWLEDGE_BASE}")
 }
 
 fn has_issue(step_id: &str, parsed: &Value) -> bool {
@@ -145,9 +150,8 @@ fn has_issue(step_id: &str, parsed: &Value) -> bool {
             !provider_ok || !gateway_ok
         }
         "runDoctor" => {
-            let warnings = parsed.get("warnings").and_then(|v| v.as_u64()).unwrap_or(0);
-            let issues = parsed.get("issues").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
-            warnings > 0 || issues > 0
+            let errors = parsed.get("errors").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+            errors > 0
         }
         _ => false,
     }
@@ -158,12 +162,12 @@ pub async fn run_repair(
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     shell_env::refresh_path();
-    let system_prompt = build_system_prompt(SYSTEM_PROMPT);
+    let system_prompt = build_system_prompt(SYSTEM_PROMPT, &config.openclaw_bin);
 
-    let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
+    let llm = make_llm(&config.provider, &config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "RepairRunner".to_string();
-    agent.llm = Some(Box::new(llm));
+    agent.llm = Some(llm);
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("repair"))];
 
@@ -172,15 +176,16 @@ pub async fn run_repair(
     })]);
 
     let gateway_prompt = build_check_gateway_prompt(&config);
-    run_step_dynamic(&mut agent, &mut session, "checkGateway", &gateway_prompt, &channel, 16, Some(build_repair_details), Some(has_issue)).await;
+    run_step_dynamic(&mut agent, &mut session, "checkGateway", &gateway_prompt, &channel, 16, Some(build_details), Some(has_issue)).await;
 
     let config_prompt = build_check_config_prompt(&config);
-    run_step_dynamic(&mut agent, &mut session, "checkConfig", &config_prompt, &channel, 16, Some(build_repair_details), Some(has_issue)).await;
+    run_step_dynamic(&mut agent, &mut session, "checkConfig", &config_prompt, &channel, 16, Some(build_details), Some(has_issue)).await;
 
     let model_prompt = build_check_model_request_prompt(&config);
-    run_step_dynamic(&mut agent, &mut session, "checkModelRequest", &model_prompt, &channel, 16, Some(build_repair_details), Some(has_issue)).await;
+    run_step_dynamic(&mut agent, &mut session, "checkModelRequest", &model_prompt, &channel, 16, Some(build_details), Some(has_issue)).await;
 
-    run_step_dynamic(&mut agent, &mut session, "runDoctor", STEP_RUN_DOCTOR.prompt, &channel, 16, Some(build_repair_details), Some(has_issue)).await;
+    let doctor_prompt = build_run_doctor_prompt(&config);
+    run_step_dynamic(&mut agent, &mut session, "runDoctor", &doctor_prompt, &channel, 16, Some(build_details), Some(has_issue)).await;
 
     let session_id = uuid::Uuid::new_v4().to_string();
     let _ = channel.send(serde_json::json!({"event": "done", "data": {"session_id": session_id}}));
@@ -195,24 +200,25 @@ pub async fn run_fix(
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     shell_env::refresh_path();
-    let system_prompt = build_system_prompt(FIX_SYSTEM_PROMPT);
+    let system_prompt = build_system_prompt(FIX_SYSTEM_PROMPT, &config.openclaw_bin);
 
-    let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
+    let llm = make_llm(&config.provider, &config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "FixRunner".to_string();
-    agent.llm = Some(Box::new(llm));
+    agent.llm = Some(llm);
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("fix"))];
 
-    let guidance = build_fix_guidance(step_id);
+    let guidance = build_fix_guidance(step_id, &config.openclaw_bin);
     let prompt = render(FIX_TEMPLATE, &[
         ("step_id", step_id),
         ("issue_description", issue_description),
-        ("guidance", guidance),
+        ("guidance", &guidance),
         ("base_url", &config.base_url),
         ("api_key", &config.api_key),
         ("model", &config.model),
         ("port", &config.gateway_port.to_string()),
+        ("openclaw_bin", &config.openclaw_bin),
     ]);
 
     let mut session = Session::with_messages(vec![serde_json::json!({
@@ -230,12 +236,13 @@ pub async fn run_custom_fix(
     problem: &str,
     channel: Channel<Value>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let system_prompt = build_system_prompt(FIX_SYSTEM_PROMPT);
+    let system_prompt = build_system_prompt(FIX_SYSTEM_PROMPT, &config.openclaw_bin);
+    let bin = &config.openclaw_bin;
 
-    let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
+    let llm = make_llm(&config.provider, &config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "CustomFixRunner".to_string();
-    agent.llm = Some(Box::new(llm));
+    agent.llm = Some(llm);
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("custom_fix"))];
 
@@ -249,9 +256,9 @@ pub async fn run_custom_fix(
 
     let steps = vec![
         DynStep { id: "analyze", prompt: analyze_prompt },
-        DynStep { id: "diagnose", prompt: CUSTOM_FIX_DIAGNOSE_TEMPLATE.to_string() },
-        DynStep { id: "fix", prompt: CUSTOM_FIX_FIX_TEMPLATE.to_string() },
-        DynStep { id: "verify", prompt: CUSTOM_FIX_VERIFY_TEMPLATE.to_string() },
+        DynStep { id: "diagnose", prompt: render(CUSTOM_FIX_DIAGNOSE_TEMPLATE, &[("openclaw_bin", bin)]) },
+        DynStep { id: "fix", prompt: render(CUSTOM_FIX_FIX_TEMPLATE, &[("openclaw_bin", bin)]) },
+        DynStep { id: "verify", prompt: render(CUSTOM_FIX_VERIFY_TEMPLATE, &[("openclaw_bin", bin)]) },
     ];
 
     for step in &steps {

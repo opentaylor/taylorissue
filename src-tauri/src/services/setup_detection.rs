@@ -3,6 +3,27 @@ use serde_json::Value;
 
 use crate::services::shell_env;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum InstallType {
+    Official,
+    TaylorIssue,
+}
+
+impl InstallType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            InstallType::Official => "official",
+            InstallType::TaylorIssue => "taylorissue",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedOpenClaw {
+    pub bin_path: String,
+    pub install_type: InstallType,
+}
+
 fn openclaw_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_default().join(".openclaw")
 }
@@ -29,28 +50,62 @@ pub fn detect_workspace_path() -> Option<String> {
     None
 }
 
-pub fn detect_openclaw_bin() -> Option<String> {
-    let enriched = shell_env::full_path();
-    if let Ok(p) = which::which_in("openclaw", Some(&enriched), ".") {
-        return Some(p.to_string_lossy().to_string());
-    }
+fn is_taylorissue_path(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    lower.contains("taylorissue") || lower.contains(".taylorissue")
+}
 
-    if let Ok(p) = which::which("openclaw") {
-        return Some(p.to_string_lossy().to_string());
-    }
-
+fn taylorissue_openclaw_path() -> PathBuf {
     #[cfg(windows)]
     {
-        if let Ok(local) = std::env::var("LOCALAPPDATA") {
-            let cmd_path = PathBuf::from(&local)
-                .join(r"taylorissue\app\node_modules\.bin\openclaw.cmd");
-            if cmd_path.is_file() {
-                return Some(cmd_path.to_string_lossy().to_string());
-            }
-        }
+        let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+        PathBuf::from(local).join(r"taylorissue\app\node_modules\.bin\openclaw.cmd")
+    }
+    #[cfg(not(windows))]
+    {
+        dirs::home_dir()
+            .unwrap_or_default()
+            .join(".taylorissue/app/node_modules/.bin/openclaw")
+    }
+}
+
+fn exclude_taylorissue_dirs(path: &str) -> String {
+    let sep = if cfg!(windows) { ';' } else { ':' };
+    path.split(sep)
+        .filter(|dir| !dir.trim().is_empty() && !is_taylorissue_path(dir))
+        .collect::<Vec<_>>()
+        .join(&sep.to_string())
+}
+
+pub fn detect_openclaw_bin() -> Option<ResolvedOpenClaw> {
+    let enriched = shell_env::full_path();
+    let system_path = exclude_taylorissue_dirs(&enriched);
+
+    if let Ok(p) = which::which_in("openclaw", Some(&system_path), ".") {
+        let path_str = p.to_string_lossy().to_string();
+        log::info!("[detect] found official openclaw at {}", path_str);
+        return Some(ResolvedOpenClaw {
+            bin_path: path_str,
+            install_type: InstallType::Official,
+        });
     }
 
+    let ti_path = taylorissue_openclaw_path();
+    if ti_path.is_file() {
+        let path_str = ti_path.to_string_lossy().to_string();
+        log::info!("[detect] found taylorissue openclaw at {}", path_str);
+        return Some(ResolvedOpenClaw {
+            bin_path: path_str,
+            install_type: InstallType::TaylorIssue,
+        });
+    }
+
+    log::info!("[detect] no openclaw binary found");
     None
+}
+
+pub fn detect_openclaw_bin_path() -> Option<String> {
+    detect_openclaw_bin().map(|r| r.bin_path)
 }
 
 pub fn detect_gateway_token() -> Option<String> {
@@ -124,15 +179,18 @@ pub fn enable_http_endpoint() -> bool {
 pub struct DetectionResult {
     pub workspace_path: Option<String>,
     pub openclaw_bin: Option<String>,
+    pub openclaw_install_type: Option<String>,
     pub gateway_token: Option<String>,
     pub gateway_port: Option<u16>,
     pub http_endpoint_enabled: Option<bool>,
 }
 
 pub fn detect_all() -> DetectionResult {
+    let resolved = detect_openclaw_bin();
     DetectionResult {
         workspace_path: detect_workspace_path(),
-        openclaw_bin: detect_openclaw_bin(),
+        openclaw_bin: resolved.as_ref().map(|r| r.bin_path.clone()),
+        openclaw_install_type: resolved.as_ref().map(|r| r.install_type.as_str().to_string()),
         gateway_token: detect_gateway_token(),
         gateway_port: detect_gateway_port(),
         http_endpoint_enabled: check_http_endpoint_enabled(),

@@ -6,7 +6,7 @@ On Windows: Test-Path "$env:USERPROFILE\.openclaw\openclaw.json"
 If missing, report failure immediately.
 
 Step 2: Check gateway status.
-  openclaw gateway status
+  "{openclaw_bin}" gateway status
 
 Respond with ONLY this JSON:
 {"success": true, "status": "<running|stopped>", "port": {port}}

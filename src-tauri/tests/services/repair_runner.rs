@@ -4,8 +4,6 @@ use taylor_issue_lib::services::step_runner::run_step_standalone;
 
 use crate::common::*;
 
-// ---- checkGateway ----
-
 #[tokio::test]
 #[ignore]
 async fn test_check_gateway() {
@@ -26,8 +24,6 @@ async fn test_check_gateway() {
     println!("[checkGateway] {result:#}");
 }
 
-// ---- checkConfig ----
-
 #[tokio::test]
 #[ignore]
 async fn test_check_config() {
@@ -47,8 +43,6 @@ async fn test_check_config() {
     println!("[checkConfig] {result:#}");
 }
 
-// ---- checkModelRequest ----
-
 #[tokio::test]
 #[ignore]
 async fn test_check_model_request() {
@@ -67,8 +61,6 @@ async fn test_check_model_request() {
     println!("[checkModelRequest] {result:#}");
 }
 
-// ---- runDoctor ----
-
 #[tokio::test]
 #[ignore]
 async fn test_run_doctor() {
@@ -76,16 +68,17 @@ async fn test_run_doctor() {
     let mut agent = make_agent(&api_key, &base_url, &model, "test_run_doctor");
     let mut session = make_session(SYSTEM_PROMPT);
 
+    let config = make_config(&api_key, &base_url, &model);
+    let prompt = build_run_doctor_prompt(&config);
+
     let result = run_step_standalone(
         &mut agent, &mut session,
-        STEP_RUN_DOCTOR.id, STEP_RUN_DOCTOR.prompt, 16,
+        "runDoctor", &prompt, 16,
     ).await.expect("runDoctor step failed");
 
     assert_has_key(&result, "success");
     println!("[runDoctor] {result:#}");
 }
-
-// ---- fix ----
 
 #[tokio::test]
 #[ignore]
@@ -106,8 +99,6 @@ async fn test_fix() {
     println!("[fix] {result:#}");
 }
 
-// ---- custom fix: analyze ----
-
 #[tokio::test]
 #[ignore]
 async fn test_custom_fix_analyze() {
@@ -127,8 +118,6 @@ async fn test_custom_fix_analyze() {
     println!("[custom_fix_analyze] {result:#}");
 }
 
-// ---- custom fix: diagnose ----
-
 #[tokio::test]
 #[ignore]
 async fn test_custom_fix_diagnose() {
@@ -143,8 +132,6 @@ async fn test_custom_fix_diagnose() {
     assert_has_key(&result, "success");
     println!("[custom_fix_diagnose] {result:#}");
 }
-
-// ---- custom fix: fix ----
 
 #[tokio::test]
 #[ignore]
@@ -169,8 +156,6 @@ async fn test_custom_fix_fix() {
     assert_has_key(&result, "success");
     println!("[custom_fix_fix] {result:#}");
 }
-
-// ---- custom fix: verify ----
 
 #[tokio::test]
 #[ignore]

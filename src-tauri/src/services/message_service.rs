@@ -32,7 +32,7 @@ async fn ensure_http_endpoint(config: &AppConfig) {
         return;
     }
     let bin = if config.openclaw_bin.is_empty() {
-        setup_detection::detect_openclaw_bin()
+        setup_detection::detect_openclaw_bin_path()
             .unwrap_or_else(|| "openclaw".to_string())
     } else {
         config.openclaw_bin.clone()

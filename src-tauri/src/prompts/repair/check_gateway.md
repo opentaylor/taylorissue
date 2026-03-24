@@ -1,12 +1,12 @@
 Check the OpenClaw gateway health. DO NOT fix anything.
 
 Step 1: Check if openclaw is installed.
-On macOS/Linux: which openclaw || echo "not installed"
-On Windows: if (Get-Command openclaw -EA SilentlyContinue) { "installed" } else { "not installed" }
+On macOS/Linux: test -x "{openclaw_bin}" && echo "installed" || echo "not installed"
+On Windows: if (Test-Path "{openclaw_bin}") { "installed" } else { "not installed" }
 
 Step 2: Check gateway and health status.
-  openclaw gateway status 2>&1
-  openclaw health 2>&1
+  "{openclaw_bin}" gateway status 2>&1
+  "{openclaw_bin}" health 2>&1
 
 The gateway should be running on port {port}.
 

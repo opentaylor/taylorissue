@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { startInstall } from "@/services/api/install"
 import type { WorkflowStepStatus } from "@/types/workflow"
 
-type InstallStepKey = "detectEnv" | "installGit" | "installNode" | "installOpenClaw" | "configure" | "startGateway" | "verify"
+type InstallStepKey = "detectEnv" | "checkOpenClaw" | "installGit" | "installNode" | "installOpenClaw" | "configure" | "startGateway" | "verify"
 
 export interface InstallStep {
   id: InstallStepKey
@@ -18,6 +18,7 @@ interface ErrorInfo {
 
 const STEP_KEYS: InstallStepKey[] = [
   "detectEnv",
+  "checkOpenClaw",
   "installGit",
   "installNode",
   "installOpenClaw",

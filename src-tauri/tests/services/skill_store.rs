@@ -3,8 +3,6 @@ use taylor_issue_lib::services::skill_store::*;
 
 use crate::common::*;
 
-// ---- agent_install with deps prompt ----
-
 #[tokio::test]
 #[ignore]
 async fn test_install_deps() {
@@ -28,8 +26,6 @@ async fn test_install_deps() {
         "agent_install returned no output"
     );
 }
-
-// ---- agent_install with clawhub prompt ----
 
 #[tokio::test]
 #[ignore]

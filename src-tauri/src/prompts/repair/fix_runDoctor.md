@@ -1,1 +1,0 @@
-Fix strategy: follow the doctor's recommendations to fix each reported issue one at a time.

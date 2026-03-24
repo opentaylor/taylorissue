@@ -160,6 +160,28 @@ function ModelService() {
     <div className="flex flex-1 flex-col">
       <FieldGroup className="flex-1">
         <Field>
+          <FieldLabel htmlFor="provider">{t("settings.provider")}</FieldLabel>
+          <Select
+            value={modelConfig.provider}
+            onValueChange={(v) => {
+              if (v === "openai" || v === "anthropic") {
+                setModelConfig({ provider: v })
+              }
+            }}
+          >
+            <SelectTrigger id="provider">
+              <span data-slot="select-value" className="flex flex-1 text-left">
+                {modelConfig.provider === "anthropic" ? "Anthropic" : "OpenAI"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai">OpenAI</SelectItem>
+              <SelectItem value="anthropic">Anthropic</SelectItem>
+            </SelectContent>
+          </Select>
+          <FieldDescription>{t("settings.providerDescription")}</FieldDescription>
+        </Field>
+        <Field>
           <FieldLabel htmlFor="api-url">{t("settings.apiUrl")}</FieldLabel>
           <Input
             id="api-url"

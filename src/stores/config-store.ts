@@ -17,6 +17,7 @@ export const useConfigStore = create<ConfigState>()(
     (set, get) => ({
       language: "zh-CN",
       modelConfig: {
+        provider: "openai",
         baseUrl: "https://aihubmix.com/v1",
         apiKey: "",
         model: "gpt-4.1",
@@ -33,6 +34,7 @@ export const useConfigStore = create<ConfigState>()(
       getAppConfig: () => {
         const state = get()
         return {
+          provider: state.modelConfig.provider,
           baseUrl: state.modelConfig.baseUrl,
           apiKey: state.modelConfig.apiKey,
           model: state.modelConfig.model,

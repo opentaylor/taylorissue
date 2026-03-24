@@ -1,9 +1,21 @@
-import { Outlet } from "react-router"
+import { Outlet, useLocation, useNavigate } from "react-router"
+import { useEffect } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { useConfigStore } from "@/stores/config-store"
 
 export default function DashboardLayout() {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const apiKey = useConfigStore((s) => s.modelConfig.apiKey)
+
+  useEffect(() => {
+    if (!apiKey && pathname !== "/") {
+      navigate("/", { replace: true })
+    }
+  }, [apiKey, pathname, navigate])
+
   return (
     <SidebarProvider
       className="max-h-screen overflow-hidden"

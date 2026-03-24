@@ -34,6 +34,8 @@
       "config": {
         "title": "快速配置模型",
         "description": "给你的龙虾配置一个大脑吧",
+        "providerLabel": "提供商",
+        "providerDescription": "选择 LLM 提供商类型（OpenAI 兼容或 Anthropic）。",
         "apiBaseLabel": "API 地址",
         "apiBaseDescription": "模型服务的 API 端点地址。",
         "apiKeyLabel": "API Key",
@@ -96,6 +98,11 @@
           "label": "检测系统环境",
           "active": "正在检测操作系统、架构和已安装的软件…",
           "complete": "系统环境检测完毕"
+        },
+        "checkOpenClaw": {
+          "label": "检测 OpenClaw",
+          "active": "正在检测是否已安装 OpenClaw…",
+          "complete": "OpenClaw 检测完毕"
         },
         "installGit": {
           "label": "安装 Git",
@@ -409,6 +416,8 @@
     "themeSystem": "系统默认",
     "themeLight": "明亮",
     "themeDark": "暗黑",
+    "provider": "提供商",
+    "providerDescription": "选择 LLM 提供商类型（OpenAI 兼容或 Anthropic）。",
     "apiUrl": "API 地址",
     "apiUrlDescription": "模型服务的 API 端点地址。",
     "apiKey": "API Key",

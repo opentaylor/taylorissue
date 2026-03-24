@@ -14,6 +14,7 @@ export function createChannel<T>(onMessage: (data: T) => void): Channel<T> {
 export function getAppConfig(): Record<string, unknown> {
   const cfg = useConfigStore.getState().getAppConfig()
   return {
+    provider: cfg.provider,
     base_url: cfg.baseUrl,
     api_key: cfg.apiKey,
     model: cfg.model,

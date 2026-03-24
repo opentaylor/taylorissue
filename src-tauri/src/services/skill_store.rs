@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::config::AppConfig;
 use crate::kernel::agent::{Agent, Session};
-use crate::kernel::llm::openai::OpenAiLlm;
+use crate::kernel::llm::base::make_llm;
 use crate::kernel::middleware::logging::LoggingMiddleware;
 use crate::kernel::tool::bash::BashTool;
 use crate::services::shell_env;
@@ -62,7 +62,7 @@ fn workspace_skills_dir() -> PathBuf {
 
 fn run_cli(args: &[&str], openclaw_bin: &str) -> Value {
     let bin = if openclaw_bin.is_empty() {
-        crate::services::setup_detection::detect_openclaw_bin()
+        crate::services::setup_detection::detect_openclaw_bin_path()
             .unwrap_or_else(|| "openclaw".to_string())
     } else {
         openclaw_bin.to_string()
@@ -143,22 +143,22 @@ pub async fn list_skills(openclaw_bin: &str) -> Result<Vec<SkillInfo>, SkillErro
     Ok(result)
 }
 
-pub const SKILL_INSTALL_PROMPT: &str = include_str!("../prompts/skill/install_system.md");
+pub const SYSTEM_PROMPT: &str = include_str!("../prompts/skill/system.md");
 pub const DEPS_TEMPLATE: &str = include_str!("../prompts/skill/deps.md");
 pub const CLAWHUB_INSTALL_TEMPLATE: &str = include_str!("../prompts/skill/clawhub_install.md");
 
 pub const MAX_INSTALL_RETRIES: usize = 16;
 
 pub async fn agent_install(config: &AppConfig, prompt: &str) -> InstallResult {
-    let llm = OpenAiLlm::new(&config.api_key, &config.base_url, &config.model);
+    let llm = make_llm(&config.provider, &config.api_key, &config.base_url, &config.model);
     let mut agent = Agent::new();
     agent.name = "SkillInstaller".to_string();
-    agent.llm = Some(Box::new(llm));
+    agent.llm = Some(llm);
     agent.tools = vec![Box::new(BashTool::new())];
     agent.middlewares = vec![Box::new(LoggingMiddleware::new("skill"))];
 
     let mut session = Session::with_messages(vec![
-        serde_json::json!({"role": "system", "content": SKILL_INSTALL_PROMPT}),
+        serde_json::json!({"role": "system", "content": SYSTEM_PROMPT}),
         serde_json::json!({"role": "user", "content": prompt}),
     ]);
 

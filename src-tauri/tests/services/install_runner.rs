@@ -10,9 +10,10 @@ async fn test_detect_env() {
     let mut agent = make_agent(&api_key, &base_url, &model, "test_detect_env");
     let mut session = make_session(SYSTEM_PROMPT);
 
+    let prompt = build_detect_env_prompt();
     let result = run_step_standalone(
         &mut agent, &mut session,
-        STEP_DETECT_ENV.id, STEP_DETECT_ENV.prompt, 16,
+        "detectEnv", &prompt, 16,
     ).await.expect("detectEnv step failed");
 
     assert_has_key(&result, "success");

@@ -10,7 +10,7 @@ i18n.use(initReactI18next).init({
     "zh-CN": { translation: zhCN },
     "en-US": { translation: enUS },
   },
-  lng: savedLang || "en-US",
+  lng: savedLang || "zh-CN",
   fallbackLng: "en-US",
   interpolation: { escapeValue: false },
 });
